@@ -4135,8 +4135,8 @@ def prysm_deps():
         patches = [
             "//third_party:network_waterfall_gitlab_waterfall_protocol_gwat_secp256k1.patch",
         ],
-        sum = "h1:oxodWrrjVIZwTay6pkFtKEE/jpKquBrQeX8C7icMiGk=",
-        version = "v0.10.3",
+        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
+        version = "v0.10.4",
 
         ## to use local repo comment `sum` & `version`, and uncomment follows below
         #        vcs = "git",

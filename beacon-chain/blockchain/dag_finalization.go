@@ -580,12 +580,14 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		// activation
 		if validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch > workEpoch {
 			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Activate,
-				ProcEpoch:  uint64(validator.ActivationEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
+				OpType:          gwatTypes.Activate,
+				ProcEpoch:       uint64(validator.ActivationEpoch),
+				Index:           uint64(idx),
+				Creator:         gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:          nil,
+				InitTxHash:      gwatCommon.BytesToHash(validator.ActivationHash),
+				ActivationEpoch: uint64(validator.ActivationEpoch),
+				ExitEpoch:       uint64(validator.ExitEpoch),
 			})
 			log.WithFields(logrus.Fields{
 				"workEpoch":                 workEpoch,
@@ -596,12 +598,14 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		// deactivation
 		if validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch > workEpoch {
 			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Deactivate,
-				ProcEpoch:  uint64(validator.ExitEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
+				OpType:          gwatTypes.Deactivate,
+				ProcEpoch:       uint64(validator.ExitEpoch),
+				Index:           uint64(idx),
+				Creator:         gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:          nil,
+				InitTxHash:      gwatCommon.BytesToHash(validator.ExitHash),
+				ActivationEpoch: uint64(validator.ActivationEpoch),
+				ExitEpoch:       uint64(validator.ExitEpoch),
 			})
 
 			log.WithFields(logrus.Fields{
@@ -636,13 +640,15 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 				}
 			}
 			vsd := &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.UpdateBalance,
-				ProcEpoch:  uint64(workEpoch) + 1,
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     helpers.GweiToWei(wop.Amount),
-				InitTxHash: gwatCommon.BytesToHash(wop.Hash),
-				Balance:    helpers.GweiToWei(balance),
+				OpType:          gwatTypes.UpdateBalance,
+				ProcEpoch:       uint64(workEpoch) + 1,
+				Index:           uint64(idx),
+				Creator:         gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:          helpers.GweiToWei(wop.Amount),
+				InitTxHash:      gwatCommon.BytesToHash(wop.Hash),
+				Balance:         helpers.GweiToWei(balance),
+				ActivationEpoch: uint64(validator.ActivationEpoch),
+				ExitEpoch:       uint64(validator.ExitEpoch),
 			}
 			validatorSyncData = append(validatorSyncData, vsd)
 			log.WithFields(logrus.Fields{
