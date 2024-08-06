@@ -104,6 +104,11 @@ func configureEth1Config(cliCtx *cli.Context) {
 		c.BlockVotingForkSlot = types.Slot(cliCtx.Uint64(flags.BlockVotingForkSlot.Name))
 		params.OverrideBeaconConfig(c)
 	}
+	if cliCtx.IsSet(flags.ValSyncProcForkSlot.Name) {
+		c := params.BeaconConfig()
+		c.ValSyncProcForkSlot = types.Slot(cliCtx.Uint64(flags.ValSyncProcForkSlot.Name))
+		params.OverrideBeaconConfig(c)
+	}
 }
 
 func configureNetwork(cliCtx *cli.Context) {

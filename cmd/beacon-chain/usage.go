@@ -102,6 +102,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DelegatingStakeForkSlot,
 			flags.PrefixFinForkSlot,
 			flags.FinEth1ForkSlot,
+			flags.ValSyncProcForkSlot,
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.CertFlag,

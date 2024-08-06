@@ -51,6 +51,7 @@ var appFlags = []cli.Flag{
 	flags.DelegatingStakeForkSlot,
 	flags.PrefixFinForkSlot,
 	flags.FinEth1ForkSlot,
+	flags.ValSyncProcForkSlot,
 	flags.SetGCPercent,
 	flags.HeadSync,
 	flags.DisableSync,

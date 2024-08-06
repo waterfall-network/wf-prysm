@@ -123,6 +123,7 @@ func TestGetSpec(t *testing.T) {
 	config.DelegateForkSlot = 2048
 	config.PrefixFinForkSlot = 256
 	config.FinEth1ForkSlot = 1024
+	config.ValSyncProcForkSlot = 2048
 	config.BlockVotingForkSlot = 1024
 
 	var dbp [4]byte
@@ -153,7 +154,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 116, len(resp.Data))
+	assert.Equal(t, 117, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -400,6 +401,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "256", v)
 		case "FIN_ETH1_FORK_SLOT":
 			assert.Equal(t, "1024", v)
+		case "VAL_SYNC_PROC_FORK_SLOT":
+			assert.Equal(t, "2048", v)
 		case "BLOCK_VOTING_FORK_SLOT":
 			assert.Equal(t, "1024", v)
 		case "ALL_SPINES_LIMIT":
