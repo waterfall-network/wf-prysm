@@ -6,11 +6,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/signing"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/time"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/utils"
 	fieldparams "gitlab.waterfall.network/waterfall/protocol/coordinator/config/fieldparams"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
@@ -309,20 +307,6 @@ func (vs *Server) validatorStatus(
 		}
 		dep, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
-			return resp, nonExistentIndex
-		}
-		domain, err := signing.ComputeDomain(
-			params.BeaconConfig().DomainDeposit,
-			nil, /*forkVersion*/
-			nil, /*genesisValidatorsRoot*/
-		)
-		if err != nil {
-			log.Warn("Could not compute domain")
-			return resp, nonExistentIndex
-		}
-		if err := utils.VerifyDepositSignature(dep.Data, domain); err != nil {
-			resp.Status = ethpb.ValidatorStatus_INVALID
-			log.WithError(err).Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
 		}
 		// Set validator deposit status if their deposit is visible.

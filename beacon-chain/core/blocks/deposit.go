@@ -82,16 +82,12 @@ func ProcessDeposits(
 ) (state.BeaconState, error) {
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	batchVerified, err := BatchVerifyDepositsSignatures(ctx, deposits)
-	if err != nil {
-		return nil, err
-	}
-
+	var err error
 	for _, dps := range deposits {
 		if dps == nil || dps.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, _, err = ProcessDeposit(beaconState, dps, batchVerified)
+		beaconState, _, err = ProcessDeposit(beaconState, dps)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(dps.Data.PublicKey))
 		}
@@ -157,7 +153,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //	    # Increase balance by deposit amount
 //	    index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //	    increase_balance(state, index, amount)
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit) (state.BeaconState, bool, error) {
 	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
@@ -172,18 +168,6 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		if verifySignature {
-			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-			if err != nil {
-				return nil, newValidator, err
-			}
-			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
-				// Ignore this error as in the spec pseudo code.
-				log.Infof("Skipping deposit: could not verify deposit data signature: %v", err)
-				return beaconState, newValidator, nil
-			}
-		}
-
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
