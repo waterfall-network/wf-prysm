@@ -7,12 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/signing"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/utils"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/container/trie"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/crypto/bls"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/math"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
@@ -93,22 +90,6 @@ func ProcessDeposits(
 		}
 	}
 	return beaconState, nil
-}
-
-// BatchVerifyDepositsSignatures batch verifies deposit signatures.
-func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
-	var err error
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-	if err != nil {
-		return false, err
-	}
-
-	verified := false
-	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
-		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
-		verified = true
-	}
-	return verified, nil
 }
 
 // ProcessDeposit takes in a deposit object and inserts it
@@ -239,50 +220,5 @@ func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit
 		)
 	}
 
-	return nil
-}
-
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
-	return utils.VerifyDepositSignature(obj, domain)
-}
-
-func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {
-	if len(deps) == 0 {
-		return nil
-	}
-	pks := make([]bls.PublicKey, len(deps))
-	sigs := make([][]byte, len(deps))
-	msgs := make([][32]byte, len(deps))
-	for i, dep := range deps {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if dep == nil || dep.Data == nil {
-			return errors.New("nil deposit")
-		}
-		dpk, err := bls.PublicKeyFromBytes(dep.Data.PublicKey)
-		if err != nil {
-			return err
-		}
-		pks[i] = dpk
-		sigs[i] = dep.Data.Signature
-		depositMessage := &ethpb.DepositMessage{
-			PublicKey:             dep.Data.PublicKey,
-			CreatorAddress:        dep.Data.CreatorAddress,
-			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
-		}
-		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
-		if err != nil {
-			return err
-		}
-		msgs[i] = sr
-	}
-	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
-	if err != nil {
-		return errors.Errorf("could not verify multiple signatures: %v", err)
-	}
-	if !verify {
-		return errors.New("one or more deposit signatures did not verify")
-	}
 	return nil
 }

@@ -16,11 +16,6 @@ func ProcessDeposits(
 	beaconState state.BeaconStateAltair,
 	deposits []*ethpb.Deposit,
 ) (state.BeaconStateAltair, error) {
-	//batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
-	//if err != nil {
-	//	return nil, err
-	//}
-
 	var err error
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
