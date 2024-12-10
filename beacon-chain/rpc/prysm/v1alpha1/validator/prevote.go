@@ -1,3 +1,17 @@
+//Copyright 2024   Blue Wave Inc.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
 package validator
 
 import (
@@ -8,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/cache"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/crypto/bls"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
@@ -27,6 +42,10 @@ func (vs *Server) GetPrevoteData(ctx context.Context, req *ethpb.PreVoteRequest)
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
+
+	if params.BeaconConfig().PrevotingDisabled {
+		return nil, status.Errorf(codes.Unavailable, "Prevoting process is disabled")
+	}
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -134,6 +153,10 @@ func (vs *Server) GetPrevoteData(ctx context.Context, req *ethpb.PreVoteRequest)
 func (vs *Server) ProposePrevote(ctx context.Context, pv *ethpb.PreVote) (*ethpb.PrevoteResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "PrevoteServer.ProposePrevote")
 	defer span.End()
+
+	if params.BeaconConfig().PrevotingDisabled {
+		return nil, status.Errorf(codes.Unavailable, "Prevoting process is disabled")
+	}
 
 	if _, err := bls.SignatureFromBytes(pv.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect prevote signature")
