@@ -75,6 +75,8 @@ func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposi
 //
 //	For each deposit in block.body.deposits:
 //	  process_deposit(state, deposit)
+//
+// Used for genesis and tests only
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState state.BeaconState,
