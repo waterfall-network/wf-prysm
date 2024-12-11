@@ -1,5 +1,14 @@
-# Go Waterfall
+# Coordinator: A Waterfall Consensus and Cordination Layer Implementation Written in Go
+
+The Waterfall team forked the project on October 20, 2021, and has since made its own changes.
+
+- [Discord](https://discord.gg/Nwb8aR2XvR)
+- [Documentation](https://docs.waterfall.network/)
+
+This is the core repository for Coordinator, a [Golang](https://golang.org/) implementation of the [Waterfall Consensus](https://waterfall.network/) specification, developed by Blue Wave Inc.
+
 ## Building the source
+
 **We strongly recommend installing go version 1.21.11 or later**
 
 Install Basel version 6.4.0
@@ -9,38 +18,31 @@ bazel build //beacon-chain:beacon-chain --config=release
 bazel build //validator:validator --config=release
 ```
 
-# Prysm: An Ethereum Consensus Implementation Written in Go
-
-[![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
-[![Go Report Card](https://goreportcard.com/badge/gitlab.waterfall.network/waterfall/protocol/coordinator)](https://goreportcard.com/report/gitlab.waterfall.network/waterfall/protocol/coordinator)
-[![Consensus_Spec_Version 1.1.8](https://img.shields.io/badge/Consensus%20Spec%20Version-v1.1.8-blue.svg)](https://github.com/ethereum/consensus-specs/tree/v1.1.8)
-[![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/CTYGPUJ)
-
-This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the [Ethereum Consensus](https://ethereum.org/en/eth2/) specification, developed by [Prysmatic Labs](https://prysmaticlabs.com). See the [Changelog](https://gitlab.waterfall.network/waterfall/protocol/coordinator/releases) for details of the latest releases and upcoming breaking changes.
-
 ### Getting Started
 
-A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/CTYGPUJ).
+A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.waterfall.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/Nwb8aR2XvR).
 
 ### Staking on Mainnet
 
-To participate in staking, you can join the [official eth2 launchpad](https://launchpad.ethereum.org). The launchpad is the only recommended way to become a validator on mainnet. You can explore validator rewards/penalties via Bitfly's block explorer: [beaconcha.in](https://beaconcha.in), and follow the latest blocks added to the chain on [beaconscan](https://beaconscan.com).
+To participate in staking, you see on the [official waterfall site](https://waterfall.network/use-waterfall/stake-water). The launchpad is the only recommended way to become a validator on mainnet.
 
 
 ## Contributing
 ### Branches
-Prysm maintains two permanent branches:
+Coordinator maintains two permanent branches:
 
-* [master](https://gitlab.waterfall.network/waterfall/protocol/coordinator/tree/master): This points to the latest stable release. It is ideal for most users.
-* [develop](https://gitlab.waterfall.network/waterfall/protocol/coordinator/tree/develop): This is used for development, it contains the latest PRs. Developers should base their PRs on this branch.
+* [main](https://github.com/waterfall-network/coordinator/tree/main): This points to the latest stable release. It is ideal for most users.
+* [develop](https://github.com/waterfall-network/coordinator/tree/develop): This is used for development, it contains the latest PRs. Developers should base their PRs on this branch.
 
 ### Guide
-Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.network/docs/contribute/contribution-guidelines/) to learn more!
+Want to get involved? Check out our [Contribution Guide](/CONTRIBUTING.md) to learn more!
 
 ## License
 
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
-[APACHE LICENSE, VERSION 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+- [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
+The code written for the Waterfall project is distributed under [APACHE LICENSE, VERSION 2.0](https://www.apache.org/licenses/LICENSE-2.0), also
+included in our repository in the `LICENSE` file.
 
 ## Legal Disclaimer
 

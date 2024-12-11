@@ -102,6 +102,7 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
+	cmd.PrevotingDisableFlag,
 	cmd.ClearDB,
 	cmd.ForceClearDB,
 	cmd.LogFormat,

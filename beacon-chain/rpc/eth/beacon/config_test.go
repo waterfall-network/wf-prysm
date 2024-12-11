@@ -125,6 +125,7 @@ func TestGetSpec(t *testing.T) {
 	config.FinEth1ForkSlot = 1024
 	config.ValSyncProcForkSlot = 2048
 	config.BlockVotingForkSlot = 1024
+	config.PrevotingDisabled = true
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -407,6 +408,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "1024", v)
 		case "ALL_SPINES_LIMIT":
 			assert.Equal(t, "128", v)
+		case "PREVOTING_DISABLED":
+			assert.Equal(t, "true", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
