@@ -54,7 +54,6 @@ type BeaconChainConfig struct {
 	SecondsPerSlot                   uint64      `yaml:"SECONDS_PER_SLOT" spec:"true"`                // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    types.Slot  `yaml:"SLOTS_PER_EPOCH" spec:"true"`                 // SlotsPerEpoch is the number of slots in an epoch.
 	SqrRootSlotsPerEpoch             types.Slot  // SqrRootSlotsPerEpoch is a hard coded value where we take the square root of `SlotsPerEpoch` and round down.
-	MinSeedLookahead                 types.Epoch `yaml:"MIN_SEED_LOOKAHEAD" spec:"true"`                  // MinSeedLookahead is the duration of randao look ahead seed.
 	MaxSeedLookahead                 types.Epoch `yaml:"MAX_SEED_LOOKAHEAD" spec:"true"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
 	EpochsPerEth1VotingPeriod        types.Epoch `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD" spec:"true"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
 	SlotsPerHistoricalRoot           types.Slot  `yaml:"SLOTS_PER_HISTORICAL_ROOT" spec:"true"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
@@ -159,6 +158,7 @@ type BeaconChainConfig struct {
 	PrefixFinForkSlot   types.Slot  `yaml:"PREFIX_FIN_FORK_SLOT" spec:"true"`   // PrefixFinForkSlot defines the slot to apply prfix finalization fix.
 	FinEth1ForkSlot     types.Slot  `yaml:"FIN_ETH1_FORK_SLOT" spec:"true"`     // FinEth1ForkSlot defines the slot to start to calculate eth1Data by finalized state.
 	BlockVotingForkSlot types.Slot  `yaml:"BLOCK_VOTING_FORK_SLOT" spec:"true"` // BlockVotingForkSlot defines the slot to start to calculate eth1Data by finalized state.
+	SeedForkEpoch       types.Epoch `yaml:"SEED_FORK_EPOCH" spec:"true"`        // SeedForkEpoch defines the epoch to start to calculate Seed with updated params.
 	// Deprecated
 	BellatrixForkVersion []byte `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	// Deprecated
@@ -256,4 +256,17 @@ func (b *BeaconChainConfig) IsFinEth1ForkSlot(slot types.Slot) bool {
 
 func (b *BeaconChainConfig) IsBlockVotingForkSlot(slot types.Slot) bool {
 	return b.BlockVotingForkSlot <= slot
+}
+
+func (b *BeaconChainConfig) IsSeedForkEpoch(epoch types.Epoch) bool {
+	return b.SeedForkEpoch <= epoch
+}
+
+// MinSeedLookahead is the duration of randao look ahead seed.
+func (b *BeaconChainConfig) MinSeedLookahead(epoch types.Epoch) types.Epoch {
+	var res types.Epoch = 1
+	if b.IsSeedForkEpoch(epoch) {
+		res = 6
+	}
+	return res
 }

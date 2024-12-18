@@ -68,7 +68,6 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.SecondsPerSlot, actual.SecondsPerSlot)
 	require.DeepEqual(t, expected.SlotsPerEpoch, actual.SlotsPerEpoch)
 	require.DeepEqual(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch)
-	require.DeepEqual(t, expected.MinSeedLookahead, actual.MinSeedLookahead)
 	require.DeepEqual(t, expected.MaxSeedLookahead, actual.MaxSeedLookahead)
 	require.DeepEqual(t, expected.EpochsPerEth1VotingPeriod, actual.EpochsPerEth1VotingPeriod)
 	require.DeepEqual(t, expected.SlotsPerHistoricalRoot, actual.SlotsPerHistoricalRoot)
@@ -168,4 +167,9 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.TerminalBlockHashActivationEpoch, actual.TerminalBlockHashActivationEpoch)
 	require.DeepEqual(t, expected.TerminalTotalDifficulty, actual.TerminalTotalDifficulty)
 	require.DeepEqual(t, expected.DefaultFeeRecipient, actual.DefaultFeeRecipient)
+	require.DeepEqual(t, expected.DelegateForkSlot, actual.DelegateForkSlot)
+	require.DeepEqual(t, expected.PrefixFinForkSlot, actual.PrefixFinForkSlot)
+	require.DeepEqual(t, expected.FinEth1ForkSlot, actual.FinEth1ForkSlot)
+	require.DeepEqual(t, expected.BlockVotingForkSlot, actual.BlockVotingForkSlot)
+	require.DeepEqual(t, expected.SeedForkEpoch, actual.SeedForkEpoch)
 }

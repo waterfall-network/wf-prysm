@@ -57,7 +57,6 @@ func TestGetSpec(t *testing.T) {
 	config.SecondsPerSlot = 25
 	config.MinAttestationInclusionDelay = 26
 	config.SlotsPerEpoch = 27
-	config.MinSeedLookahead = 28
 	config.MaxSeedLookahead = 29
 	config.EpochsPerEth1VotingPeriod = 30
 	config.SlotsPerHistoricalRoot = 31

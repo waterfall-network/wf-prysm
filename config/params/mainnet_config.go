@@ -106,7 +106,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SecondsPerSlot:       6,
 	SlotsPerEpoch:        32,
 	SqrRootSlotsPerEpoch: 5,
-	MinSeedLookahead:     1,
 	MaxSeedLookahead:     4,
 	//EpochsPerEth1VotingPeriod:        64,
 	EpochsPerEth1VotingPeriod:        4,
@@ -231,6 +230,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	SeedForkEpoch:        math.MaxUint64,
 	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.

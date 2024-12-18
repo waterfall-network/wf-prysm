@@ -41,7 +41,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.CleanWithdrawalsAftEpochs = 100
 	minimalConfig.SqrRootSlotsPerEpoch = 2
-	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.EpochsPerEth1VotingPeriod = 4
 	minimalConfig.SlotsPerHistoricalRoot = 64
@@ -97,6 +96,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BellatrixForkEpoch = math.MaxUint64
 	minimalConfig.ShardingForkVersion = []byte{3, 0, 0, 1}
 	minimalConfig.ShardingForkEpoch = math.MaxUint64
+	minimalConfig.SeedForkEpoch = math.MaxUint64
 
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
