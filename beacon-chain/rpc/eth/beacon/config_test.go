@@ -123,6 +123,7 @@ func TestGetSpec(t *testing.T) {
 	config.PrefixFinForkSlot = 256
 	config.FinEth1ForkSlot = 1024
 	config.BlockVotingForkSlot = 1024
+	config.SeedForkEpoch = 2048
 	config.PrevotingDisabled = true
 
 	var dbp [4]byte
@@ -402,6 +403,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "1024", v)
 		case "BLOCK_VOTING_FORK_SLOT":
 			assert.Equal(t, "1024", v)
+		case "SEED_FORK_EPOCH":
+			assert.Equal(t, "2048", v)
 		case "ALL_SPINES_LIMIT":
 			assert.Equal(t, "128", v)
 		case "PREVOTING_DISABLED":
