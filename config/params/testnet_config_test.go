@@ -171,5 +171,5 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.PrefixFinForkSlot, actual.PrefixFinForkSlot)
 	require.DeepEqual(t, expected.FinEth1ForkSlot, actual.FinEth1ForkSlot)
 	require.DeepEqual(t, expected.BlockVotingForkSlot, actual.BlockVotingForkSlot)
-	require.DeepEqual(t, expected.SeedForkSlot, actual.SeedForkSlot)
+	require.DeepEqual(t, expected.ValSyncProcForkSlot, actual.ValSyncProcForkSlot)
 }

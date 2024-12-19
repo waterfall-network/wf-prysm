@@ -124,7 +124,6 @@ func TestGetSpec(t *testing.T) {
 	config.FinEth1ForkSlot = 1024
 	config.ValSyncProcForkSlot = 2048
 	config.BlockVotingForkSlot = 1024
-	config.SeedForkSlot = 2048
 	config.PrevotingDisabled = true
 
 	var dbp [4]byte
@@ -155,7 +154,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 118, len(resp.Data))
+	assert.Equal(t, 117, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -236,8 +235,6 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "26", v)
 		case "SLOTS_PER_EPOCH":
 			assert.Equal(t, "27", v)
-		case "MIN_SEED_LOOKAHEAD":
-			assert.Equal(t, "28", v)
 		case "MAX_SEED_LOOKAHEAD":
 			assert.Equal(t, "29", v)
 		case "EPOCHS_PER_ETH1_VOTING_PERIOD":
@@ -406,8 +403,6 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "2048", v)
 		case "BLOCK_VOTING_FORK_SLOT":
 			assert.Equal(t, "1024", v)
-		case "SEED_FORK_SLOT":
-			assert.Equal(t, "2048", v)
 		case "ALL_SPINES_LIMIT":
 			assert.Equal(t, "128", v)
 		case "PREVOTING_DISABLED":
