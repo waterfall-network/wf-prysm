@@ -158,7 +158,7 @@ type BeaconChainConfig struct {
 	PrefixFinForkSlot   types.Slot  `yaml:"PREFIX_FIN_FORK_SLOT" spec:"true"`   // PrefixFinForkSlot defines the slot to apply prfix finalization fix.
 	FinEth1ForkSlot     types.Slot  `yaml:"FIN_ETH1_FORK_SLOT" spec:"true"`     // FinEth1ForkSlot defines the slot to start to calculate eth1Data by finalized state.
 	BlockVotingForkSlot types.Slot  `yaml:"BLOCK_VOTING_FORK_SLOT" spec:"true"` // BlockVotingForkSlot defines the slot to start to calculate eth1Data by finalized state.
-	SeedForkEpoch       types.Epoch `yaml:"SEED_FORK_EPOCH" spec:"true"`        // SeedForkEpoch defines the epoch to start to calculate Seed with updated params.
+	SeedForkSlot        types.Slot  `yaml:"SEED_FORK_SLOT" spec:"true"`         // SeedForkSlot defines the epoch to start to calculate Seed with updated params.
 	// Deprecated
 	BellatrixForkVersion []byte `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	// Deprecated
@@ -258,14 +258,15 @@ func (b *BeaconChainConfig) IsBlockVotingForkSlot(slot types.Slot) bool {
 	return b.BlockVotingForkSlot <= slot
 }
 
-func (b *BeaconChainConfig) IsSeedForkEpoch(epoch types.Epoch) bool {
-	return b.SeedForkEpoch <= epoch
+func (b *BeaconChainConfig) IsSeedForkSlot(slot types.Slot) bool {
+	return b.SeedForkSlot <= slot
 }
 
 // MinSeedLookahead is the duration of randao look ahead seed.
 func (b *BeaconChainConfig) MinSeedLookahead(epoch types.Epoch) types.Epoch {
 	var res types.Epoch = 1
-	if b.IsSeedForkEpoch(epoch) {
+	slot, err := b.SlotsPerEpoch.SafeMul(uint64(epoch))
+	if b.IsSeedForkSlot(slot) || err != nil {
 		res = 6
 	}
 	return res

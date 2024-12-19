@@ -230,8 +230,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
-	SeedForkEpoch:        math.MaxUint64,
-	ShardingForkEpoch:    math.MaxUint64,
+	SeedForkSlot:         math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
