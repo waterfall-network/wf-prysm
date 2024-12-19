@@ -14,6 +14,8 @@
 
 package params
 
+import "math"
+
 // UseTestnet9NetworkConfig uses the Testnet9 specific network config.
 func UseTestnet9NetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
@@ -38,6 +40,7 @@ func Testnet9Config() *BeaconChainConfig {
 	cfg.PrefixFinForkSlot = 0
 	cfg.FinEth1ForkSlot = 0
 	cfg.BlockVotingForkSlot = 0
+	cfg.BlockVotingForkSlot = math.MaxUint64
 	//cfg.SlotsPerArchivedPoint = 2048
 
 	cfg.SlotsPerEpoch = 32

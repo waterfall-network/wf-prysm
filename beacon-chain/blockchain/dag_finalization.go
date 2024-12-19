@@ -590,45 +590,7 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 
 	ffepoch := params.BeaconConfig().FarFutureEpoch
 
-	err = workState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
-		// activation
-		if validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch > workEpoch {
-			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Activate,
-				ProcEpoch:  uint64(validator.ActivationEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
-			})
-			log.WithFields(logrus.Fields{
-				"workEpoch":                 workEpoch,
-				"validator.ActivationEpoch": validator.ActivationEpoch,
-				"InitTxHash":                fmt.Sprintf("%#x", validator.ActivationHash),
-			}).Info("activate params")
-		}
-		// deactivation
-		if validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch > workEpoch {
-			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Deactivate,
-				ProcEpoch:  uint64(validator.ExitEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
-			})
-
-			log.WithFields(logrus.Fields{
-				"workEpoch":           workEpoch,
-				"validator.ExitEpoch": validator.ExitEpoch,
-				"InitTxHash":          fmt.Sprintf("%#x", validator.ExitHash),
-			}).Info("Exit params")
-		}
-		return false, validator, nil
-	})
-	if err != nil {
-		return nil, err
-	}
+	minEpoch := cpState.FinalizedCheckpointEpoch()
 
 	// withdrawals (update balance) calculate for finalized cp
 	minSlot, err := slots.EpochStart(cpState.FinalizedCheckpointEpoch() + 1)
@@ -636,7 +598,57 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		return nil, err
 	}
 
-	err = cpState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
+	err = workState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
+		// activation
+		isActivating := validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch > workEpoch
+		if params.BeaconConfig().IsFinEth1ForkSlot(headState.Slot()) {
+			isActivating = validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch >= minEpoch
+		}
+		if isActivating {
+			op := &gwatTypes.ValidatorSync{
+				OpType:     gwatTypes.Activate,
+				ProcEpoch:  uint64(validator.ActivationEpoch),
+				Index:      uint64(idx),
+				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:     nil,
+				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
+			}
+			validatorSyncData = append(validatorSyncData, op)
+			log.WithFields(logrus.Fields{
+				"slot":                currentSlot,
+				"minEpoch":            minEpoch,
+				"workEpoch":           workEpoch,
+				"valSyncOp":           op.Print(),
+				"val.ActivationEpoch": validator.ActivationEpoch,
+			}).Info("Validator sync params: activate")
+		}
+
+		// deactivation
+		isDeactivating := validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch > workEpoch
+		if params.BeaconConfig().IsFinEth1ForkSlot(headState.Slot()) {
+			isDeactivating = validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch >= minEpoch
+		}
+		if isDeactivating {
+			op := &gwatTypes.ValidatorSync{
+				OpType:     gwatTypes.Deactivate,
+				ProcEpoch:  uint64(validator.ExitEpoch),
+				Index:      uint64(idx),
+				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:     nil,
+				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
+			}
+			validatorSyncData = append(validatorSyncData, op)
+
+			log.WithFields(logrus.Fields{
+				"slot":                currentSlot,
+				"minEpoch":            minEpoch,
+				"workEpoch":           workEpoch,
+				"valSyncOp":           op.Print(),
+				"validator.ExitEpoch": validator.ExitEpoch,
+			}).Info("Validator sync params: exit")
+		}
+
+		// withdrawal
 		for _, wop := range validator.WithdrawalOps {
 			if wop.Slot < minSlot {
 				continue
@@ -660,12 +672,12 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 			}
 			validatorSyncData = append(validatorSyncData, vsd)
 			log.WithFields(logrus.Fields{
-				"st.Slot":    currentSlot,
-				"wop.Slot":   wop.Slot,
-				"valSyncOp":  vsd.Print(),
-				"exit":       validator.ExitEpoch <= workEpoch,
-				"InitTxHash": fmt.Sprintf("%#x", wop.Hash),
-			}).Info("Withdrawals: Update balance params")
+				"slot":          currentSlot,
+				"minSlot":       minSlot,
+				"wop.Slot":      wop.Slot,
+				"valSyncOp":     vsd.Print(),
+				"isDeactivated": validator.ExitEpoch <= workEpoch,
+			}).Info("Validator sync params: update balance")
 		}
 		return false, validator, nil
 	})
