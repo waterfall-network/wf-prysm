@@ -57,7 +57,7 @@ func (e *EngineClient) ExecutionDagValidateSpines(ctx context.Context, params gw
 	panic("implement me")
 }
 
-func (e *EngineClient) ExecutionDagSpineSync(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
+func (e *EngineClient) ExecutionDagSyncSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
 	panic("implement me")
 }
 
