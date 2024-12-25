@@ -878,3 +878,27 @@ func (s *Service) repairGwatFinalization(
 	}
 	return err
 }
+
+// processDagSyncSpines implements dag spine synchronization.
+func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
+	ctx, span := trace.StartSpan(s.ctx, "blockChain.processDagFinalization")
+	defer span.End()
+
+	finalizationSeq := helpers.GetFinalizationSequence(blockState).Uniq()
+
+	log.WithFields(logrus.Fields{
+		" slot":  blockState.Slot(),
+		"spines": finalizationSeq,
+	}).Info("Dag sync spines: finalization params")
+
+	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(ctx, finalizationSeq)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			" slot":  blockState.Slot(),
+			"spines": finalizationSeq,
+		}).Error("Dag sync spines: execution failed")
+		return
+	}
+
+	return
+}

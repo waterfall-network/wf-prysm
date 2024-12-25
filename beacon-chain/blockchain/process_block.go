@@ -377,6 +377,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.Wrap(err, "could not save head")
 	}
 
+	//processDagSyncSpines
+	if headRoot != blockRoot && !s.IsGwatSynchronizing() && headRoot != params.BeaconConfig().ZeroHash {
+		go s.processDagSyncSpines(postState)
+		return nil
+	}
+
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),
 		//"postBlockVoting": helpers.PrintBlockVotingArr(postState.BlockVoting()),
