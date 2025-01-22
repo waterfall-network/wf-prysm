@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,6 +31,7 @@ const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
+const errIncorrectMerkleIndex = "received incorrect merkle index"
 
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
@@ -131,15 +133,14 @@ func (s *Service) ProcessWithdrawalLog(ctx context.Context, wtdLog gwatTypes.Log
 		return errors.Wrap(err, "Could not unpack log (withdrawal)")
 	}
 
-	exit := &ethpb.Withdrawal{
+	withdrawal := &ethpb.Withdrawal{
 		PublicKey:      pubkey.Bytes(),
 		ValidatorIndex: types.ValidatorIndex(valIndex),
 		InitTxHash:     wtdLog.TxHash.Bytes(),
 		Amount:         amtGwei,
 		Epoch:          curEpoch + 2, // min 1 epoch to propagate op by network
 	}
-	s.cfg.withdrawalPool.InsertWithdrawal(ctx, exit)
-
+	s.cfg.withdrawalPool.InsertWithdrawal(ctx, withdrawal)
 	return nil
 }
 
@@ -177,7 +178,6 @@ func (s *Service) ProcessExitLog(ctx context.Context, exitLog gwatTypes.Log) err
 		ValidatorIndex: types.ValidatorIndex(valIndex),
 		InitTxHash:     exitLog.TxHash.Bytes(),
 	}
-
 	s.cfg.exitPool.InsertVoluntaryExitByGwat(ctx, exit)
 
 	log.WithError(err).WithFields(logrus.Fields{
@@ -220,7 +220,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gwatTypes.Lo
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		return errors.Errorf("received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
+		return errors.Errorf("%s: wanted %d but got %d", errIncorrectMerkleIndex, s.lastReceivedMerkleIndex+1, index)
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -593,7 +593,15 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	if requestedBlock > s.latestEth1Data.LastRequestedBlock &&
 		requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference {
 		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
-		return s.processPastLogs(ctx)
+		if err := s.processPastLogs(ctx); err != nil {
+			if strings.Contains(err.Error(), errIncorrectMerkleIndex) {
+				log.WithError(err).Warning("=== LogProcessing: requestBatchedHeadersAndLogs: attempt to fix deposits cache 1")
+				s.setLastRequestedBlockByDepositCache()
+				return s.processPastLogs(ctx)
+			}
+			return err
+		}
+		return nil
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
@@ -603,6 +611,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		}
 		err = s.ProcessETH1Block(ctx, i)
 		if err != nil {
+			if strings.Contains(err.Error(), errIncorrectMerkleIndex) {
+				log.WithError(err).Warning("=== LogProcessing: requestBatchedHeadersAndLogs: attempt to fix deposits cache 2")
+				s.setLastRequestedBlockByDepositCache()
+				return s.processPastLogs(ctx)
+			}
 			return err
 		}
 		s.latestEth1Data.LastRequestedBlock = i
@@ -727,7 +740,7 @@ func (s *Service) ProcessDepositBlock(deposit *ethpb.Deposit, depositIndex uint6
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		return errors.Errorf("block deposit processing: received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
+		return errors.Errorf("block deposit processing: %s: wanted %d but got %d", errIncorrectMerkleIndex, s.lastReceivedMerkleIndex+1, index)
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -798,7 +811,8 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 		if bBlock == nil {
 			return 0, fmt.Errorf("beacon block not found")
 		}
-		for _, dep := range bBlock.Block().Body().Deposits() {
+		for i := len(bBlock.Block().Body().Deposits()) - 1; i >= 0; i-- {
+			dep := bBlock.Block().Body().Deposits()[i]
 			deposits = append(deposits, dep)
 			currIndex--
 		}
@@ -823,4 +837,20 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 		offset++
 	}
 	return offset, nil
+}
+
+func (s *Service) setLastRequestedBlockByDepositCache() {
+	blknr, ok := s.cfg.depositCache.GetBlockNrByDepositIndex(s.ctx, s.lastReceivedMerkleIndex)
+	if !ok {
+		log.WithFields(logrus.Fields{
+			" blknr":                  blknr,
+			"lastReceivedMerkleIndex": fmt.Sprintf("%d", s.lastReceivedMerkleIndex),
+		}).Error("=== LogProcessing: StateTracker: EVT: FinalizedCheckpoint: set LastRequestedBlock failed")
+		return
+	}
+	log.WithFields(logrus.Fields{
+		" blknr":                  blknr,
+		"lastReceivedMerkleIndex": fmt.Sprintf("%d", s.lastReceivedMerkleIndex),
+	}).Info("=== LogProcessing: StateTracker: EVT: FinalizedCheckpoint: set LastRequestedBlock")
+	s.latestEth1Data.LastRequestedBlock = blknr
 }
