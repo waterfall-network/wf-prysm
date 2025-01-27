@@ -378,10 +378,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	//processDagSyncSpines
-	if headRoot != blockRoot && !s.IsGwatSynchronizing() && headRoot != params.BeaconConfig().ZeroHash {
-		go s.processDagSyncSpines(postState)
-		return nil
-	}
+	go s.processDagSyncSpines(postState)
 
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),

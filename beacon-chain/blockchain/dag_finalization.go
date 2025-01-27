@@ -883,19 +883,63 @@ func (s *Service) repairGwatFinalization(
 func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 	ctx, span := trace.StartSpan(s.ctx, "blockChain.processDagFinalization")
 	defer span.End()
+	if blockState == nil {
+		return
+	}
+	if s.IsGwatSynchronizing() {
+		return
+	}
+	candidates := gwatCommon.HashArrayFromBytes(blockState.SpineData().Spines)
+	if len(candidates) == 0 {
+		return
+	}
+	prefix := gwatCommon.HashArrayFromBytes(blockState.SpineData().Prefix)
+	fulCandidates := append(prefix, candidates...)
 
-	finalizationSeq := helpers.GetFinalizationSequence(blockState).Uniq()
+	////todo:	uncomment
+	////check jy shard node exists by optimistic spines
+	//cpFinalized := s.headState(s.ctx).SpineData().CpFinalized
+	////cpFinalized := blockState.SpineData().CpFinalized
+	//keySpine := gwatCommon.BytesToHash(cpFinalized[len(cpFinalized)-32:])
+	//optSpines := s.GetCacheOptimisticSpines(keySpine)
+	//flatOptSpines := make(gwatCommon.HashArray, 0, len(optSpines)*8)
+	//for _, opts := range optSpines {
+	//	flatOptSpines = append(flatOptSpines, opts...)
+	//}
+	//isSync := true
+	//for _, cand := range fulCandidates {
+	//	if !flatOptSpines.Has(cand) {
+	//		isSync = false
+	//		break
+	//	}
+	//}
+	//if isSync {
+	//	log.WithFields(logrus.Fields{
+	//		" slot":  blockState.Slot(),
+	//		"flatOptSpines": flatOptSpines,
+	//		"fulCandidates": fulCandidates,
+	//	}).Info("Dag sync spines: skipping by optimistic spines")
+	//	return
+	//}
+
+	finalizationSeq := helpers.GetFinalizationSequence(blockState)
+	baseSpine := helpers.GetBaseSpine(blockState)
+	syncSeq := make(gwatCommon.HashArray, 0, 1+len(finalizationSeq)+len(prefix))
+	syncSeq = append(syncSeq, baseSpine)
+	syncSeq = append(syncSeq, finalizationSeq...)
+	syncSeq = append(syncSeq, fulCandidates...)
+	syncSeq.Deduplicate()
 
 	log.WithFields(logrus.Fields{
 		" slot":  blockState.Slot(),
-		"spines": finalizationSeq,
-	}).Info("Dag sync spines: finalization params")
+		"spines": syncSeq,
+	}).Info("Dag sync spines: sync params")
 
-	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(ctx, finalizationSeq)
+	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(ctx, syncSeq)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			" slot":  blockState.Slot(),
-			"spines": finalizationSeq,
+			"spines": syncSeq,
 		}).Error("Dag sync spines: execution failed")
 		return
 	}
