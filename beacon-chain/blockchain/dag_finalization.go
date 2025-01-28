@@ -887,6 +887,15 @@ func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 		return
 	}
 	if s.IsGwatSynchronizing() {
+		log.WithFields(logrus.Fields{
+			" slot": blockState.Slot(),
+		}).Info("Dag sync spines: skipping by shard sync")
+		return
+	}
+	if s.isSynchronizing() {
+		log.WithFields(logrus.Fields{
+			" slot": blockState.Slot(),
+		}).Info("Dag sync spines: skipping by initial-sync")
 		return
 	}
 	candidates := gwatCommon.HashArrayFromBytes(blockState.SpineData().Spines)
@@ -896,31 +905,29 @@ func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 	prefix := gwatCommon.HashArrayFromBytes(blockState.SpineData().Prefix)
 	fulCandidates := append(prefix, candidates...)
 
-	////todo:	uncomment
-	////check jy shard node exists by optimistic spines
-	//cpFinalized := s.headState(s.ctx).SpineData().CpFinalized
-	////cpFinalized := blockState.SpineData().CpFinalized
-	//keySpine := gwatCommon.BytesToHash(cpFinalized[len(cpFinalized)-32:])
-	//optSpines := s.GetCacheOptimisticSpines(keySpine)
-	//flatOptSpines := make(gwatCommon.HashArray, 0, len(optSpines)*8)
-	//for _, opts := range optSpines {
-	//	flatOptSpines = append(flatOptSpines, opts...)
-	//}
-	//isSync := true
-	//for _, cand := range fulCandidates {
-	//	if !flatOptSpines.Has(cand) {
-	//		isSync = false
-	//		break
-	//	}
-	//}
-	//if isSync {
-	//	log.WithFields(logrus.Fields{
-	//		" slot":  blockState.Slot(),
-	//		"flatOptSpines": flatOptSpines,
-	//		"fulCandidates": fulCandidates,
-	//	}).Info("Dag sync spines: skipping by optimistic spines")
-	//	return
-	//}
+	//check candidates exists in optimistic spines
+	cpFinalized := blockState.SpineData().CpFinalized
+	keySpine := gwatCommon.BytesToHash(cpFinalized[len(cpFinalized)-32:])
+	optSpines := s.GetCacheOptimisticSpines(keySpine)
+	flatOptSpines := make(gwatCommon.HashArray, 0, len(optSpines)*8)
+	for _, opts := range optSpines {
+		flatOptSpines = append(flatOptSpines, opts...)
+	}
+	isSync := true
+	for _, cand := range fulCandidates {
+		if !flatOptSpines.Has(cand) {
+			isSync = false
+			break
+		}
+	}
+	if isSync {
+		log.WithFields(logrus.Fields{
+			" slot":         blockState.Slot(),
+			"flatOptSpines": flatOptSpines,
+			"fulCandidates": fulCandidates,
+		}).Info("Dag sync spines: skipping by optimistic spines")
+		return
+	}
 
 	finalizationSeq := helpers.GetFinalizationSequence(blockState)
 	baseSpine := helpers.GetBaseSpine(blockState)
@@ -935,7 +942,10 @@ func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 		"spines": syncSeq,
 	}).Info("Dag sync spines: sync params")
 
-	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(ctx, syncSeq)
+	tout := time.Duration((params.BeaconConfig().SecondsPerSlot*1000)/4) * time.Millisecond
+	reqCtx, cancel := context.WithTimeout(ctx, tout)
+	defer cancel()
+	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(reqCtx, syncSeq)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			" slot":  blockState.Slot(),
