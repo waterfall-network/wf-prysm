@@ -883,6 +883,9 @@ func (s *Service) repairGwatFinalization(
 func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 	ctx, span := trace.StartSpan(s.ctx, "blockChain.processDagFinalization")
 	defer span.End()
+	if s.cfg.ExecutionEngineCaller == nil {
+		return
+	}
 	if blockState == nil {
 		return
 	}
