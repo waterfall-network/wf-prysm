@@ -1,3 +1,17 @@
+//Copyright 2024   Blue Wave Inc.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
 package withdrawals
 
 import (
@@ -23,16 +37,21 @@ import (
 // This pool is used by proposers to insert withdrawals into new blocks.
 type PoolManager interface {
 	PendingWithdrawals(slot types.Slot, st state.ReadOnlyBeaconState, noLimit bool) []*ethpb.Withdrawal
-	InsertWithdrawal(ctx context.Context, withdrawal *ethpb.Withdrawal)
+	InsertWithdrawal(ctx context.Context, withdrawal *ethpb.Withdrawal, blockNr uint64)
 	MarkIncluded(withdrawal *ethpb.Withdrawal)
 	OnSlot(st state.ReadOnlyBeaconState)
 	Verify(withdrawal *ethpb.Withdrawal) error
+	CopyItems() []*ethpb.Withdrawal
+	RemoveItem(initTxHash []byte) bool
+	Reset()
+	GetBlockNr(initTxHash []byte) uint64
 }
 
 // Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock    sync.RWMutex
 	pending []*ethpb.Withdrawal
+	txBlNr  map[[32]byte]uint64
 }
 
 // NewPool accepts a head fetcher (for reading the validator set) and returns an initialized
@@ -40,6 +59,7 @@ type Pool struct {
 func NewPool() *Pool {
 	return &Pool{
 		pending: make([]*ethpb.Withdrawal, 0),
+		txBlNr:  make(map[[32]byte]uint64),
 	}
 }
 
@@ -128,7 +148,7 @@ func (p *Pool) PendingWithdrawals(slot types.Slot, st state.ReadOnlyBeaconState,
 
 // InsertWithdrawal into the pool. This method is a no-op if the pending withdrawal already exists,
 // or the validator is already withdrawaled.
-func (p *Pool) InsertWithdrawal(ctx context.Context, withdrawal *ethpb.Withdrawal) {
+func (p *Pool) InsertWithdrawal(ctx context.Context, withdrawal *ethpb.Withdrawal, blockNr uint64) {
 	_, span := trace.StartSpan(ctx, "withdrawalPool.InsertWithdrawal")
 	defer span.End()
 	p.lock.Lock()
@@ -156,6 +176,10 @@ func (p *Pool) InsertWithdrawal(ctx context.Context, withdrawal *ethpb.Withdrawa
 
 	// Insert into pending list and sort.
 	p.pending = append(p.pending, withdrawal)
+	if p.txBlNr == nil {
+		p.txBlNr = make(map[[32]byte]uint64)
+	}
+	p.txBlNr[bytesutil.ToBytes32(withdrawal.InitTxHash)] = blockNr
 	sort.Slice(p.pending, func(i, j int) bool {
 		return p.pending[i].Epoch < p.pending[j].Epoch
 	})
@@ -171,9 +195,11 @@ func (p *Pool) MarkIncluded(withdrawal *ethpb.Withdrawal) {
 	if exists {
 		// WithdrawalPool we want is present at p.pending[index], so we remove it.
 		p.pending = append(p.pending[:index], p.pending[index+1:]...)
+		delete(p.txBlNr, bytesutil.ToBytes32(withdrawal.InitTxHash))
 	}
 }
 
+// Verify checks provided instance is acceptable.
 func (p *Pool) Verify(withdrawal *ethpb.Withdrawal) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -228,6 +254,7 @@ func (p *Pool) OnSlot(st state.ReadOnlyBeaconState) {
 		if err := validateWithdrawal(itm, st); err == nil {
 			pending = append(pending, itm)
 		} else {
+			delete(p.txBlNr, bytesutil.ToBytes32(itm.InitTxHash))
 			log.WithError(err).WithFields(log.Fields{
 				"VIndex":     fmt.Sprintf("%d", itm.ValidatorIndex),
 				"PublicKey":  fmt.Sprintf("%#x", itm.PublicKey),
@@ -295,4 +322,53 @@ func validateWithdrawal(itm *ethpb.Withdrawal, st state.ReadOnlyBeaconState) err
 		return fmt.Errorf("validate: low balance bal=%d < amt=%d", bal, itm.Amount)
 	}
 	return nil
+}
+
+func (p *Pool) CopyItems() []*ethpb.Withdrawal {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	result := make([]*ethpb.Withdrawal, len(p.pending))
+	for i, op := range p.pending {
+		result[i] = &ethpb.Withdrawal{
+			PublicKey:      bytesutil.SafeCopyBytes(op.PublicKey),
+			ValidatorIndex: op.ValidatorIndex,
+			Amount:         op.Amount,
+			InitTxHash:     bytesutil.SafeCopyBytes(op.InitTxHash),
+			Epoch:          op.Epoch,
+		}
+	}
+	return result
+}
+
+func (p *Pool) RemoveItem(initTxHash []byte) bool {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	var res bool
+	// remove item by initTx
+	pending := make([]*ethpb.Withdrawal, 0, len(p.pending))
+	for _, itm := range p.pending {
+		if bytes.Equal(itm.InitTxHash, initTxHash) {
+			delete(p.txBlNr, bytesutil.ToBytes32(itm.InitTxHash))
+			res = true
+			continue
+		}
+		pending = append(pending, itm)
+	}
+	p.pending = pending
+	return res
+}
+
+func (p *Pool) Reset() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.pending = make([]*ethpb.Withdrawal, 0)
+	p.txBlNr = make(map[[32]byte]uint64)
+}
+
+func (p *Pool) GetBlockNr(initTxHash []byte) uint64 {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return p.txBlNr[bytesutil.ToBytes32(initTxHash)]
 }

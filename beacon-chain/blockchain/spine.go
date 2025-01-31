@@ -1,3 +1,17 @@
+//Copyright 2024   Blue Wave Inc.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
 package blockchain
 
 import (
@@ -26,6 +40,7 @@ type spineData struct {
 	sync.RWMutex
 }
 
+// GetOptimisticSpines retrieves and caches actual optimistic spines.
 func (s *Service) GetOptimisticSpines(ctx context.Context, baseSpine gwatCommon.Hash) ([]gwatCommon.HashArray, error) {
 	if s.isSynchronizing() {
 		log.WithError(fmt.Errorf("Node syncing to latest head, not ready to respond")).WithFields(logrus.Fields{
@@ -57,7 +72,8 @@ func (s *Service) GetOptimisticSpines(ctx context.Context, baseSpine gwatCommon.
 		log.WithError(errWrap).WithFields(logrus.Fields{
 			"baseSpine": baseSpine,
 		}).Error("Get Optimistic Spines: retrieving opt spine failed")
-		return s.GetCacheOptimisticSpines(baseSpine), nil
+		return nil, errWrap
+		//return s.GetCacheOptimisticSpines(baseSpine), nil
 	}
 	s.setCacheOptimisticSpines(baseSpine, optSpines)
 

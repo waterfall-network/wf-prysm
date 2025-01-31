@@ -1,4 +1,4 @@
-// Package beacon-chain defines the entire runtime of an Ethereum beacon node.
+// Package beacon-chain defines the entire runtime of an beacon node.
 package main
 
 import (
@@ -101,6 +101,7 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
+	cmd.PrevotingDisableFlag,
 	cmd.ClearDB,
 	cmd.ForceClearDB,
 	cmd.LogFormat,

@@ -1,3 +1,17 @@
+//Copyright 2024   Blue Wave Inc.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
 package withdrawals
 
 import (
@@ -252,12 +266,12 @@ func TestPool_InsertWithdrawal(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	for _, tt := range tests {
+	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			p.InsertWithdrawal(ctx, tt.args.withdrawal)
+			p.InsertWithdrawal(ctx, tt.args.withdrawal, uint64(i))
 			if len(p.pending) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
 			}
@@ -447,6 +461,128 @@ func TestPool_PendingWithdrawals(t *testing.T) {
 			require.NoError(t, err)
 			if got := p.PendingWithdrawals(tt.args.slot, s, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingWithdrawals() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPool_RemoveWithdrawal(t *testing.T) {
+	type fields struct {
+		pending []*ethpb.Withdrawal
+	}
+	type args struct {
+		initTxHash []byte
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []*ethpb.Withdrawal
+	}{
+		{
+			name: "Remove not existed item",
+			fields: fields{
+				pending: []*ethpb.Withdrawal{
+					{
+						Epoch:          10,
+						ValidatorIndex: 1,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 5},
+					},
+					{
+						Epoch:          12,
+						ValidatorIndex: 0,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 3},
+					},
+					{
+						Epoch:          15,
+						ValidatorIndex: 2,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 4},
+					},
+				},
+			},
+			args: args{
+				initTxHash: []byte{0, 1},
+			},
+			want: []*ethpb.Withdrawal{
+				{
+					Epoch:          10,
+					ValidatorIndex: 1,
+					Amount:         45000,
+					InitTxHash:     []byte{0, 1, 2, 5},
+				},
+				{
+					Epoch:          12,
+					ValidatorIndex: 0,
+					Amount:         45000,
+					InitTxHash:     []byte{0, 1, 2, 3},
+				},
+				{
+					Epoch:          15,
+					ValidatorIndex: 2,
+					Amount:         45000,
+					InitTxHash:     []byte{0, 1, 2, 4},
+				},
+			},
+		},
+		{
+			name: "Remove existed item",
+			fields: fields{
+				pending: []*ethpb.Withdrawal{
+					{
+						Epoch:          10,
+						ValidatorIndex: 1,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 5},
+					},
+					{
+						Epoch:          12,
+						ValidatorIndex: 0,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 3},
+					},
+					{
+						Epoch:          15,
+						ValidatorIndex: 2,
+						Amount:         45000,
+						InitTxHash:     []byte{0, 1, 2, 4},
+					},
+				},
+			},
+			args: args{
+				initTxHash: []byte{0, 1, 2, 3},
+			},
+			want: []*ethpb.Withdrawal{
+				{
+					Epoch:          10,
+					ValidatorIndex: 1,
+					Amount:         45000,
+					InitTxHash:     []byte{0, 1, 2, 5},
+				},
+				{
+					Epoch:          15,
+					ValidatorIndex: 2,
+					Amount:         45000,
+					InitTxHash:     []byte{0, 1, 2, 4},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pending: tt.fields.pending,
+			}
+			p.RemoveItem(tt.args.initTxHash)
+			if len(p.pending) != len(tt.want) {
+				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
+			}
+			for i := range p.pending {
+				if !proto.Equal(p.pending[i], tt.want[i]) {
+					t.Errorf("Pending withdrawal at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want[i])
+				}
 			}
 		})
 	}

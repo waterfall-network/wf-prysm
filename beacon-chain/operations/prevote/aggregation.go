@@ -1,3 +1,17 @@
+//Copyright 2024   Blue Wave Inc.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
 package prevote
 
 import (
@@ -13,6 +27,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// HasPrevote returns true if provided instance has been cached otherwise - false.
 func (c *PrevoteCache) HasPrevote(pv *ethpb.PreVote) (bool, error) {
 	if pv == nil || pv.Data == nil {
 		return false, errors.New("Prevote data cannot be nil")
@@ -35,6 +50,7 @@ func (c *PrevoteCache) HasPrevote(pv *ethpb.PreVote) (bool, error) {
 	return false, nil
 }
 
+// SavePrevote adds provided instance to the cache.
 func (c *PrevoteCache) SavePrevote(pv *ethpb.PreVote) error {
 	if pv == nil {
 		return nil
@@ -101,6 +117,7 @@ func (c *PrevoteCache) hasSeenBit(pv *ethpb.PreVote) (bool, error) {
 	return false, nil
 }
 
+// GetPrevoteBySlot get actual votes by slot.
 func (c *PrevoteCache) GetPrevoteBySlot(ctx context.Context, slot types.Slot) []*ethpb.PreVote {
 	_, span := trace.StartSpan(ctx, "operations.prevote.GetPrevoteBySlot")
 	defer span.End()
@@ -121,6 +138,7 @@ func (c *PrevoteCache) GetPrevoteBySlot(ctx context.Context, slot types.Slot) []
 	return []*ethpb.PreVote{}
 }
 
+// PurgeOutdatedPrevote removes unactual votes by slot.
 func (c *PrevoteCache) PurgeOutdatedPrevote(curSlot types.Slot) error {
 	c.prevoteCacheLock.RLock()
 	defer c.prevoteCacheLock.RUnlock()

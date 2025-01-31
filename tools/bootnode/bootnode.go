@@ -1,12 +1,10 @@
-/**
- * Bootnode
- *
- * A node which implements the DiscoveryV5 protocol for peer
- * discovery. The purpose of this service is to provide a starting point for
- * newly connected services to find other peers outside of their network.
- *
- * Usage: Run bootnode --help for flag options.
- */
+/*
+Bootnode
+A node which implements the DiscoveryV5 protocol for peer
+discovery. The purpose of this service is to provide a starting point for
+newly connected services to find other peers outside of their network.
+Usage: Run bootnode --help for flag options.
+*/
 package main
 
 import (
@@ -114,8 +112,14 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
-		log.Fatalf("Failed to start server %v", err)
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", *metricsPort),
+		ReadHeaderTimeout: 3 * time.Second,
+		Handler:           mux,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.WithError(err).Fatal("Failed to start server")
 	}
 
 	// Update metrics once per slot.
@@ -157,11 +161,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 		log.Fatal(err)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, cfg)
+	net, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return network
+	return net
 }
 
 func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
@@ -179,7 +183,7 @@ func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
 		write(w, []byte("Node ID: "+n.ID().String()+"\n"))
 		write(w, []byte("IP: "+n.IP().String()+"\n"))
 		write(w, []byte(fmt.Sprintf("UDP Port: %d", n.UDP())+"\n"))
-		write(w, []byte(fmt.Sprintf("TCP Port: %d", n.UDP())+"\n\n"))
+		write(w, []byte(fmt.Sprintf("TCP Port: %d", n.TCP())+"\n\n"))
 	}
 }
 
@@ -252,7 +256,6 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {

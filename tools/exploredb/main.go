@@ -1,11 +1,9 @@
-/**
- * Explore DB contents
- *
- * Given a beacon-chain DB, This tool provides many option to
- * inspect and explore it. For every non-empty bucket, print
- * the number of rows, bucket size,min/average/max size of values
- */
-
+/*
+Explore DB contents.
+Given a beacon-chain DB, This tool provides many option to
+inspect and explore it. For every non-empty bucket, print
+the number of rows, bucket size,min/average/max size of values.
+*/
 package main
 
 import (
@@ -434,8 +432,8 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			continue
 		}
 
-		if len(sourceState.Validators()) != len(destinationState.Validators()) {
-			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
+		if sourceState.NumValidators() != destinationState.NumValidators() {
+			log.Fatalf("validator mismatch : source = %d, dest = %d", sourceState.NumValidators(), destinationState.NumValidators())
 		}
 		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {

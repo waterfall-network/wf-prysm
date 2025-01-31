@@ -7,6 +7,7 @@ package depositcache
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"sort"
 	"sync"
@@ -74,6 +75,26 @@ func New() (*DepositCache, error) {
 	}, nil
 }
 
+func (dc *DepositCache) Reset(ctx context.Context) error {
+	_, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
+	defer span.End()
+
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	finalizedDepositsTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	if err != nil {
+		log.WithError(err).Error("Deposit cache: reset failed")
+		return err
+	}
+	dc.pendingDeposits = []*ethpb.DepositContainer{}
+	dc.deposits = []*ethpb.DepositContainer{}
+	dc.depositsByKey = map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{}
+	dc.finalizedDeposits = &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1}
+	log.Info("Deposit cache: reset")
+	return nil
+}
+
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
@@ -116,6 +137,17 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	pubkey := bytesutil.ToBytes48(d.Data.PublicKey)
 	dc.depositsByKey[pubkey] = append(dc.depositsByKey[pubkey], depCtr)
 	historicalDepositsCount.Inc()
+
+	if d.Data != nil {
+		dHashTreeRoot, err := d.Data.HashTreeRoot()
+		log.WithError(err).WithFields(logrus.Fields{
+			" depositRoot":     fmt.Sprintf("%#x", depositRoot),
+			"eth1Block":        blockNum,
+			"dep.HashTreeRoot": fmt.Sprintf("%#x", dHashTreeRoot),
+			"dep.initTxHash":   fmt.Sprintf("%#x", d.Data.InitTxHash),
+			"dep.Index":        index,
+		}).Info("InsertDeposit")
+	}
 	return nil
 }
 

@@ -151,7 +151,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Info("onBlock: withdrawal")
 
-			if !s.IsGwatSynchronizing() && !s.isSynchronizing() && params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) {
+			if !s.IsGwatSynchronizing() &&
+				!s.isSynchronizing() &&
+				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
+				s.IsValOpPoolValid() {
 				if err := s.cfg.WithdrawalPool.Verify(itm); err != nil {
 					log.WithError(err).WithFields(logrus.Fields{
 						"i":              i,
@@ -178,7 +181,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Info("onBlock: exit")
 
-			if !s.IsGwatSynchronizing() && !s.isSynchronizing() && params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) {
+			if !s.IsGwatSynchronizing() &&
+				!s.isSynchronizing() &&
+				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
+				s.IsValOpPoolValid() {
 				if err := s.cfg.ExitPool.Verify(itm); err != nil {
 					log.WithError(err).WithFields(logrus.Fields{
 						"i":              i,
@@ -258,6 +264,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}).Error("onBlock error")
 		return err
 	}
+	s.rmBlRootProcessing(blockRoot)
+	rmBlRootProc = false
 
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),
@@ -552,9 +560,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	sigSet := &bls.SignatureBatch{
-		Signatures: [][]byte{},
-		PublicKeys: []bls.PublicKey{},
-		Messages:   [][32]byte{},
+		Signatures:   [][]byte{},
+		PublicKeys:   []bls.PublicKey{},
+		Messages:     [][32]byte{},
+		Descriptions: []string{},
 	}
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
@@ -625,9 +634,21 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		}).Error("Block batch handling error")
 		return nil, nil, err
 	}
+
+	lastFinCp := fCheckpoints[len(fCheckpoints)-1]
+
+	err = s.ForkChoicer().Prune(ctx, [32]byte(lastFinCp.Root))
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"checkpointRoot": lastFinCp.Root,
+		}).Error("ForkChoicer cache prune error")
+	}
+
 	return fCheckpoints, jCheckpoints, nil
 }
 
+// BatchHandlerBlockInfoFetcherFunc provides access to blocks info
+// including stored in db over context for state transition while initial-sync.
 func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.SignedBeaconBlock, blockRoots [][32]byte) params.CtxBlockFetcher {
 	return func(ctx context.Context, blockRoot [32]byte) (types.ValidatorIndex, types.Slot, uint64, error) {
 		var blk block.SignedBeaconBlock
