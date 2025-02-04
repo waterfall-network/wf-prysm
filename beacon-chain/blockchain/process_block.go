@@ -383,6 +383,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.Wrap(err, "could not save head")
 	}
 
+	//processDagSyncSpines
+	go s.processDagSyncSpines(postState)
+
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),
 		//"postBlockVoting": helpers.PrintBlockVotingArr(postState.BlockVoting()),
