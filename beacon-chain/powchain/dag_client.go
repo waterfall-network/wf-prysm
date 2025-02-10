@@ -43,6 +43,8 @@ const (
 	ExecutionDagSyncSlotInfoMethod = "dag_syncSlotInfo"
 	// ExecutionDagValidateSpinesMethod request string for JSON-RPC of dag api.
 	ExecutionDagValidateSpinesMethod = "dag_validateSpines"
+	// ExecutionDagSyncSpinesMethod request string for JSON-RPC of dag api.
+	ExecutionDagSyncSpinesMethod = "dag_syncSpines"
 	// ExecutionDepositCountMethod request string for JSON-RPC of validator api.
 	ExecutionDepositCountMethod = "wat_validator_DepositCount"
 )
@@ -215,6 +217,32 @@ func (s *Service) ExecutionDagValidateSpines(ctx context.Context, params gwatCom
 
 	if err != nil {
 		log.WithError(err).Error("ExecutionDagValidateSpines")
+	}
+	return result, handleDagRPCError(err)
+}
+
+// ExecutionDagSyncSpines executing spines validation
+// by calling dag_validateSpines via JSON-RPC.
+func (s *Service) ExecutionDagSyncSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.dag-api-client.ExecutionDagSyncSpines")
+	defer span.End()
+	defer func(start time.Time) {
+		log.WithField("api", ExecutionDagSyncSpinesMethod).WithField("elapsed", time.Since(start)).Info("Request finish")
+	}(time.Now())
+
+	var result bool
+	if s.rpcClient == nil {
+		return result, fmt.Errorf("Rpc Client not init")
+	}
+	err := s.rpcClient.CallContext(
+		ctx,
+		&result,
+		ExecutionDagSyncSpinesMethod,
+		params,
+	)
+
+	if err != nil {
+		log.WithError(err).Error("ExecutionDagSyncSpines")
 	}
 	return result, handleDagRPCError(err)
 }

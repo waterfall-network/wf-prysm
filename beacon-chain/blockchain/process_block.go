@@ -151,7 +151,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Info("onBlock: withdrawal")
 
-			if !s.IsGwatSynchronizing() && !s.isSynchronizing() && params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) {
+			if !s.IsGwatSynchronizing() &&
+				!s.isSynchronizing() &&
+				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
+				s.IsValOpPoolValid() {
 				if err := s.cfg.WithdrawalPool.Verify(itm); err != nil {
 					log.WithError(err).WithFields(logrus.Fields{
 						"i":              i,
@@ -178,7 +181,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Info("onBlock: exit")
 
-			if !s.IsGwatSynchronizing() && !s.isSynchronizing() && params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) {
+			if !s.IsGwatSynchronizing() &&
+				!s.isSynchronizing() &&
+				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
+				s.IsValOpPoolValid() {
 				if err := s.cfg.ExitPool.Verify(itm); err != nil {
 					log.WithError(err).WithFields(logrus.Fields{
 						"i":              i,
@@ -376,6 +382,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}).Error("onBlock error could not save head")
 		return errors.Wrap(err, "could not save head")
 	}
+
+	//processDagSyncSpines
+	go s.processDagSyncSpines(postState)
 
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),
@@ -641,6 +650,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	return fCheckpoints, jCheckpoints, nil
 }
 
+// BatchHandlerBlockInfoFetcherFunc provides access to blocks info
+// including stored in db over context for state transition while initial-sync.
 func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.SignedBeaconBlock, blockRoots [][32]byte) params.CtxBlockFetcher {
 	return func(ctx context.Context, blockRoot [32]byte) (types.ValidatorIndex, types.Slot, uint64, error) {
 		var blk block.SignedBeaconBlock
