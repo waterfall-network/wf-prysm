@@ -881,3 +881,218 @@ func TestGetParentByOptimisticSpines_TwoBranches(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, nrToHash(7), r, "Incorrect head with justified epoch at 0")
 }
+
+func Test_isSequenceMatchOptimisticSpines(t *testing.T) {
+	optSpines := []gwatCommon.HashArray{
+		{{'a', '1'}},
+		{nrToHash(0), nrToHash(0), {'a', '2'}, nrToHash(0)},
+		{{'b', '3'}}, // <<< "b3"
+		{nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), {'a', '4'}},
+		{{'a', '5'}},
+		{nrToHash(0), nrToHash(0), nrToHash(0), {'a', '6'}, nrToHash(0), nrToHash(0)},
+		{{'a', '7'}},
+		{{'a', '8'}, nrToHash(0)},
+		{nrToHash(0), nrToHash(0), {'a', '9'}},
+		{{'a', '1', '0'}},
+	}
+
+	spineSeq0 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		{'a', '4'},
+		{'a', '5'},
+		{'a', '6'},
+		{'a', '7'},
+		{'a', '8'},
+		{'a', '9'},
+		{'a', '1', '0'},
+	}
+
+	spineSeq1 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		{'a', '4'},
+		//{'a', '5'},
+		//{'a', '6'},
+		{'a', '7'},
+		{'a', '8'},
+		{'a', '9'},
+		{'a', '1', '0'},
+	}
+
+	//before fork FcTgTreeForkSlot
+	actual := isSequenceMatchOptimisticSpines(spineSeq0, optSpines)
+	require.Equal(t, true, actual)
+	actual = isSequenceMatchOptimisticSpines(spineSeq1, optSpines)
+	require.Equal(t, false, actual)
+}
+
+func Test_isPrefixMatchOptimisticSpines(t *testing.T) {
+	optSpines := []gwatCommon.HashArray{
+		{{'a', '1'}},
+		{nrToHash(0), nrToHash(0), {'a', '2'}, nrToHash(0)},
+		{{'b', '3'}}, // <<< "b3"
+		{nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), {'a', '4'}},
+		{{'a', '5'}},
+		{nrToHash(0), nrToHash(0), nrToHash(0), {'a', '6'}, nrToHash(0), nrToHash(0)},
+		{{'a', '7'}},
+		{{'a', '8'}, nrToHash(0)},
+		{nrToHash(0), nrToHash(0), {'a', '9'}},
+		{{'a', '1', '0'}},
+	}
+
+	spineSeq0 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		{'a', '4'},
+		{'a', '5'},
+		{'a', '6'},
+		{'a', '7'},
+		{'a', '8'},
+		{'a', '9'},
+		{'a', '1', '0'},
+	}
+
+	spineSeq1 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		{'a', '4'},
+		//{'a', '5'},
+		//{'a', '6'},
+		{'a', '7'},
+		{'a', '8'},
+		{'a', '9'},
+		{'a', '1', '0'},
+	}
+
+	actual := isPrefixMatchOptimisticSpines(spineSeq0, optSpines)
+	require.Equal(t, true, actual)
+	actual = isPrefixMatchOptimisticSpines(spineSeq1, optSpines)
+	require.Equal(t, true, actual)
+}
+
+func Test_collectTgTreeNodesByOptimisticSpines_1_forks_FcTgTreeForkSlot(t *testing.T) {
+	memoFcTgTreeForkSlot := params.BeaconConfig().FcTgTreeForkSlot
+	params.BeaconConfig().FcTgTreeForkSlot = 0
+	defer func() {
+		params.BeaconConfig().FcTgTreeForkSlot = memoFcTgTreeForkSlot
+	}()
+
+	f := &ForkChoice{store: &Store{}}
+	f.store.canonicalNodes = map[[32]byte]bool{}
+	f.store.nodesIndices = map[[32]byte]uint64{
+		nrToHash(0): 0,
+		nrToHash(1): 1,
+		nrToHash(2): 2,
+		nrToHash(3): 3,
+		nrToHash(4): 4,
+		nrToHash(5): 5,
+		nrToHash(6): 6,
+		nrToHash(7): 7,
+		nrToHash(8): 8,
+		nrToHash(9): 9,
+	}
+	f.store.nodes = []*Node{
+
+		{slot: 0, root: nrToHash(0), parent: NonExistentNode, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{},
+			prefix:       gwatCommon.HashArray{},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 1, root: nrToHash(1), parent: 0, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '2'}},
+			prefix:       gwatCommon.HashArray{},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 2, root: nrToHash(2), parent: 1, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '2'}, {'a', '3'}},
+			prefix:       gwatCommon.HashArray{},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 3, root: nrToHash(3), parent: 2, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '2'}, {'a', '3'}, {'a', '4'}},
+			prefix:       gwatCommon.HashArray{{'a', '2'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		//fork 1
+		{slot: 4, root: nrToHash(4), parent: 1, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '2'}, {'a', '3'}, {'a', '4'}},
+			prefix:       gwatCommon.HashArray{{'a', '2'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 5, root: nrToHash(5), parent: 4, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '3'}, {'a', '4'}, {'a', '5'}},
+			prefix:       gwatCommon.HashArray{{'a', '2'}, {'a', '3'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		//fork 2
+		{slot: 6, root: nrToHash(6), parent: 2, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '4'}, {'a', '5'}, {'a', '6'}},
+			prefix:       gwatCommon.HashArray{{'a', '2'}, {'a', '3'}, {'a', '4'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 7, root: nrToHash(7), parent: 6, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '5'}, {'a', '6'}, {'a', '7'}},
+			prefix:       gwatCommon.HashArray{{'a', '3'}, {'a', '4'}, {'a', '5'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}, {'a', '2'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		//fork 3
+		{slot: 8, root: nrToHash(8), parent: 5, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '6'}, {'a', '7'}, {'a', '8'}},
+			prefix:       gwatCommon.HashArray{{'a', '4'}, {'a', '5'}, {'a', '6'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}, {'a', '2'}, {'a', '3'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+		{slot: 9, root: nrToHash(9), parent: 8, spinesData: &SpinesData{
+			spines:       gwatCommon.HashArray{{'a', '7'}, {'a', '8'}, {'a', '9'}, {'a', '1', '0'}},
+			prefix:       gwatCommon.HashArray{{'a', '4'}, {'a', '5'}, {'a', '6'}, {'a', '7'}},
+			finalization: gwatCommon.HashArray{{'a', '1'}, {'a', '2'}, {'a', '3'}},
+			cpFinalized:  gwatCommon.HashArray{{'x', 'x', 'x'}},
+		}},
+	}
+
+	optSpines := []gwatCommon.HashArray{
+		{{'a', '1'}},
+		{nrToHash(0), nrToHash(0), {'a', '2'}, nrToHash(0)},
+		{{'b', '3'}}, // <<< "b3"
+		{nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), nrToHash(0), {'a', '4'}},
+		{{'a', '5'}},
+		{nrToHash(0), nrToHash(0), nrToHash(0), {'a', '6'}, nrToHash(0), nrToHash(0)},
+		{{'a', '7'}},
+		{{'a', '8'}, nrToHash(0)},
+		{nrToHash(0), nrToHash(0), {'a', '9'}},
+		{{'a', '1', '0'}},
+	}
+
+	wantRootIndexMap := map[[32]byte]uint64{
+		nrToHash(0): 0,
+		nrToHash(1): 1,
+		nrToHash(2): 2,
+		nrToHash(3): 3,
+		nrToHash(4): 4,
+		nrToHash(5): 5,
+		nrToHash(6): 6,
+		nrToHash(7): 7,
+	}
+	wantLeafs := map[[32]byte]int{
+		nrToHash(5): 4,
+		nrToHash(7): 5,
+		nrToHash(3): 4,
+	}
+
+	rootIndexMap, leafs := collectTgTreeNodesByOptimisticSpines(f, optSpines, nrToHash(0))
+	require.DeepEqual(t, wantRootIndexMap, rootIndexMap)
+	require.DeepEqual(t, wantLeafs, leafs)
+}
