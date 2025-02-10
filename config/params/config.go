@@ -159,6 +159,7 @@ type BeaconChainConfig struct {
 	FinEth1ForkSlot     types.Slot  `yaml:"FIN_ETH1_FORK_SLOT" spec:"true"`      // FinEth1ForkSlot defines the slot to start to calculate eth1Data by finalized state.
 	BlockVotingForkSlot types.Slot  `yaml:"BLOCK_VOTING_FORK_SLOT" spec:"true"`  // BlockVotingForkSlot defines the slot to start to calculate eth1Data by finalized state.
 	ValSyncProcForkSlot types.Slot  `yaml:"VAL_SYNC_PROC_FORK_SLOT" spec:"true"` // ValSyncProcForkSlot defines the slot to start improved validator sync procedure.
+	FcTgTreeForkSlot    types.Slot  `yaml:"FC_TG_TREE_FORK_SLOT" spec:"true"`    // FcTgTreeForkSlot defines the slot to start improved algorithm to build T(G) Tree.
 	// Deprecated
 	BellatrixForkVersion []byte `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	// Deprecated
@@ -265,11 +266,15 @@ func (b *BeaconChainConfig) IsValSyncProcForkSlot(slot types.Slot) bool {
 	return b.ValSyncProcForkSlot <= slot
 }
 
+func (b *BeaconChainConfig) IsFcTgTreeForkSlot(slot types.Slot) bool {
+	return b.FcTgTreeForkSlot <= slot
+}
+
 // MinSeedLookahead is the duration of randao look ahead seed.
 func (b *BeaconChainConfig) MinSeedLookahead(epoch types.Epoch) types.Epoch {
 	var res types.Epoch = 1
 	slot, err := b.SlotsPerEpoch.SafeMul(uint64(epoch))
-	if b.IsValSyncProcForkSlot(slot) || err != nil {
+	if b.IsFcTgTreeForkSlot(slot) || err != nil {
 		res = 6
 	}
 	return res
