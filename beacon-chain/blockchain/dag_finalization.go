@@ -393,6 +393,8 @@ func (s *Service) runProcessDagFinalize() {
 					"Slot":      newHead.state.Slot(),
 					"cp.Epoch":  newHead.state.FinalizedCheckpoint().Epoch,
 				}).Info("Dag finalization: success")
+
+				go s.initDagSyncSpines()
 			}
 		}
 	}()
@@ -889,6 +891,52 @@ func (s *Service) repairGwatFinalization(
 		}
 	}
 	return err
+}
+
+func (s *Service) initDagSyncSpines() {
+	currentSlot := s.CurrentSlot()
+	_, roots, err := s.cfg.BeaconDB.BlockRootsBySlot(s.ctx, currentSlot)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+		}).Error("Init Dag sync spines: get roots failed")
+		return
+	}
+	if len(roots) == 0 {
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+		}).Info("Init Dag sync spines: no roots")
+		return
+	}
+
+	for _, root := range roots {
+		if root == params.BeaconConfig().ZeroHash {
+			log.WithFields(logrus.Fields{
+				"currentSlot": currentSlot,
+				"headSlot":    s.headSlot(),
+				"root":        fmt.Sprintf("%#x", root),
+			}).Info("Init Dag sync spines: zero root")
+			continue
+		}
+		blockState, err := s.cfg.StateGen.StateByRoot(s.ctx, root)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"currentSlot": currentSlot,
+				"headSlot":    s.headSlot(),
+				"root":        fmt.Sprintf("%#x", root),
+			}).Error("Init Dag sync spines: get state failed")
+			continue
+		}
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+			"root":        fmt.Sprintf("%#x", root),
+		}).Info("Init Dag sync spines: init process")
+		s.processDagSyncSpines(blockState)
+	}
+	return
 }
 
 // processDagSyncSpines implements dag spine synchronization.
