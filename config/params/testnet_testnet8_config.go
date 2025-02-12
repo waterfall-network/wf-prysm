@@ -60,6 +60,8 @@ func Testnet8Config() *BeaconChainConfig {
 	//todo require
 	cfg.FinEth1ForkSlot = math.MaxUint64
 	cfg.BlockVotingForkSlot = math.MaxUint64
+	cfg.ValSyncProcForkSlot = math.MaxUint64
+	cfg.FcTgTreeForkSlot = math.MaxUint64
 	cfg.SlotsPerArchivedPoint = 2048
 
 	cfg.SlotsPerEpoch = 32

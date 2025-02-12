@@ -256,7 +256,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 	e := time.CurrentEpoch(state)
 	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
-	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead(e) {
 		wantedEpoch := time.PrevEpoch(state)
 		s, err := slots.EpochEnd(wantedEpoch)
 		if err != nil {

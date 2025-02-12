@@ -105,7 +105,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SecondsPerSlot:               6,
 	SlotsPerEpoch:                32,
 	SqrRootSlotsPerEpoch:         5,
-	MinSeedLookahead:             1,
 	MaxSeedLookahead:             4,
 	//EpochsPerEth1VotingPeriod:        64,
 	EpochsPerEth1VotingPeriod:        4,
@@ -227,10 +226,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	PrefixFinForkSlot:    0,
 	FinEth1ForkSlot:      0,
 	BlockVotingForkSlot:  216000,
+	ValSyncProcForkSlot:  math.MaxUint64,
+	FcTgTreeForkSlot:     3326400,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
-	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

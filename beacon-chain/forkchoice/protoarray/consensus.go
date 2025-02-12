@@ -233,6 +233,13 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 	leafs := make(map[[32]byte]int)
 	nodesIndices := fc.store.cpyNodesIndices()
 
+	existedSpines := make(map[[32]byte]bool)
+	for _, opts := range optSpines {
+		for _, s := range opts {
+			existedSpines[s] = true
+		}
+	}
+
 	for frkNr, frk := range forks {
 		if frk == nil {
 			continue
@@ -283,18 +290,30 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 
 			// check finalization matches to optSpines
 			finalization := node.spinesData.Finalization()
-			ok := isSequenceMatchOptimisticSpines(finalization, forkOptSpines)
+			var ok = true
+			if params.BeaconConfig().IsFcTgTreeForkSlot(node.slot) {
+				// check all finalized spines exist in optimistic spines
+				for _, s := range finalization {
+					if !existedSpines[s] {
+						ok = false
+						break
+					}
+				}
+			} else {
+				ok = isSequenceMatchOptimisticSpines(finalization, forkOptSpines)
+			}
 
 			log.WithFields(logrus.Fields{
-				"ok":           ok,
-				"frkNr":        frkNr,
-				"node.index":   i,
-				"node.slot":    node.slot,
-				"node.root":    fmt.Sprintf("%#x", node.root),
-				"jCpRoot":      fmt.Sprintf("%#x", jCpRoot),
-				"finalization": len(finalization),
-				"frkOptSpines": len(forkOptSpines),
-				"frkSlots":     frkSlots,
+				" ok":                 ok,
+				" frkNr":              frkNr,
+				" node.index":         i,
+				" node.slot":          node.slot,
+				" IsFcTgTreeForkSlot": params.BeaconConfig().IsFcTgTreeForkSlot(node.slot),
+				"node.root":           fmt.Sprintf("%#x", node.root),
+				"jCpRoot":             fmt.Sprintf("%#x", jCpRoot),
+				"finalization":        len(finalization),
+				"frkOptSpines":        len(forkOptSpines),
+				"frkSlots":            len(frkSlots),
 			}).Info("collectTgTreeNodesByOptimisticSpines: check finalization")
 
 			if !ok {
@@ -307,15 +326,20 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 				prefOptSpines = forkOptSpines[len(finalization):]
 			}
 			prefix := node.spinesData.Prefix()
-			ok = isSequenceMatchOptimisticSpines(prefix, prefOptSpines)
+			if params.BeaconConfig().IsFcTgTreeForkSlot(node.slot) {
+				ok = isPrefixMatchOptimisticSpines(prefix, prefOptSpines)
+			} else {
+				ok = isSequenceMatchOptimisticSpines(prefix, prefOptSpines)
+			}
 
 			log.WithFields(logrus.Fields{
-				"ok":         ok,
-				"frkNr":      frkNr,
-				"node.index": i,
-				"node.slot":  node.slot,
-				"node.root":  fmt.Sprintf("%#x", node.root),
-				"frkSlots":   frkSlots,
+				" ok":                 ok,
+				" frkNr":              frkNr,
+				" node.index":         i,
+				" node.slot":          node.slot,
+				" IsFcTgTreeForkSlot": params.BeaconConfig().IsFcTgTreeForkSlot(node.slot),
+				"node.root":           fmt.Sprintf("%#x", node.root),
+				"frkSlots":            (frkSlots),
 			}).Info("collectTgTreeNodesByOptimisticSpines: check prefix")
 
 			if !ok {
@@ -410,6 +434,25 @@ func isSequenceMatchOptimisticSpines(seq gwatCommon.HashArray, optSpines []gwatC
 		}
 	}
 	return true
+}
+
+func isPrefixMatchOptimisticSpines(prefix gwatCommon.HashArray, optSpines []gwatCommon.HashArray) bool {
+	if len(prefix) == 0 {
+		return true
+	}
+	if len(prefix) > len(optSpines) {
+		return false
+	}
+	j := 0
+	for _, os := range optSpines {
+		if os.Has(prefix[j]) {
+			j++
+			if j == len(prefix) {
+				break
+			}
+		}
+	}
+	return j == len(prefix)
 }
 
 func indexOfOptimisticSpines(hash gwatCommon.Hash, optSpines []gwatCommon.HashArray) int {
