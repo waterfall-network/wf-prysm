@@ -1118,14 +1118,11 @@ func Test_collectTgTreeNodesByOptimisticSpines_1_forks_FcTgTreeForkSlot(t *testi
 		nrToHash(2): 2,
 		nrToHash(3): 3,
 		nrToHash(4): 4,
-		nrToHash(5): 5,
-		nrToHash(6): 6,
-		nrToHash(7): 7,
 	}
 	wantLeafs := map[[32]byte]int{
-		nrToHash(5): 4,
-		nrToHash(7): 5,
+		nrToHash(2): 3,
 		nrToHash(3): 4,
+		nrToHash(4): 3,
 	}
 
 	rootIndexMap, leafs := collectTgTreeNodesByOptimisticSpines(f, optSpines, nrToHash(0))

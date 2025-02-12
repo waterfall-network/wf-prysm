@@ -437,6 +437,9 @@ func isSequenceMatchOptimisticSpines(seq gwatCommon.HashArray, optSpines []gwatC
 }
 
 func isPrefixMatchOptimisticSpines(prefix gwatCommon.HashArray, optSpines []gwatCommon.HashArray) bool {
+	if len(prefix) == 0 {
+		return true
+	}
 	if len(prefix) > len(optSpines) {
 		return false
 	}
