@@ -440,15 +440,16 @@ func isPrefixMatchOptimisticSpines(prefix gwatCommon.HashArray, optSpines []gwat
 	if len(prefix) > len(optSpines) {
 		return false
 	}
-	for i, h := range prefix {
-		if !optSpines[i].Has(h) {
-			if i >= len(prefix) {
-				return false
+	j := 0
+	for _, os := range optSpines {
+		if os.Has(prefix[j]) {
+			j++
+			if j == len(prefix) {
+				break
 			}
-			continue
 		}
 	}
-	return true
+	return j == len(prefix)
 }
 
 func indexOfOptimisticSpines(hash gwatCommon.Hash, optSpines []gwatCommon.HashArray) int {

@@ -955,6 +955,8 @@ func Test_isPrefixMatchOptimisticSpines(t *testing.T) {
 		{'a', '9'},
 		{'a', '1', '0'},
 	}
+	actual := isPrefixMatchOptimisticSpines(spineSeq0, optSpines)
+	require.Equal(t, true, actual)
 
 	spineSeq1 := gwatCommon.HashArray{
 		{'a', '1'},
@@ -968,11 +970,45 @@ func Test_isPrefixMatchOptimisticSpines(t *testing.T) {
 		{'a', '9'},
 		{'a', '1', '0'},
 	}
-
-	actual := isPrefixMatchOptimisticSpines(spineSeq0, optSpines)
-	require.Equal(t, true, actual)
 	actual = isPrefixMatchOptimisticSpines(spineSeq1, optSpines)
 	require.Equal(t, true, actual)
+
+	//must be failed
+	spineSeq2 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'f', 'f'}, //no in optSpines
+		{'a', '4'},
+	}
+	actual = isPrefixMatchOptimisticSpines(spineSeq2, optSpines)
+	require.Equal(t, false, actual)
+
+	//must be true
+	spineSeq3 := gwatCommon.HashArray{
+		//{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		{'a', '4'},
+	}
+	actual = isPrefixMatchOptimisticSpines(spineSeq3, optSpines)
+	require.Equal(t, true, actual)
+
+	//must be failed
+	spineSeq4 := gwatCommon.HashArray{
+		{'a', '1'},
+		{'a', '2'},
+		{'b', '3'},
+		//{'a', '4'}, // skipped
+		//{'a', '5'}, // skipped
+		{'a', '6'},
+		{'a', '7'},
+		{'a', '8'},
+		{'a', '9'},
+		{'a', '1', '0'},
+		{'f', 'f', 'f'}, // no in opsSpines
+	}
+	actual = isPrefixMatchOptimisticSpines(spineSeq4, optSpines)
+	require.Equal(t, false, actual)
 }
 
 func Test_collectTgTreeNodesByOptimisticSpines_1_forks_FcTgTreeForkSlot(t *testing.T) {
