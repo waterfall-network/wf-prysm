@@ -394,7 +394,8 @@ func (s *Service) runProcessDagFinalize() {
 					"cp.Epoch":  newHead.state.FinalizedCheckpoint().Epoch,
 				}).Info("Dag finalization: success")
 
-				go s.initDagSyncSpines()
+				//todo refactor
+				//go s.initDagSyncSpines()
 			}
 		}
 	}()
