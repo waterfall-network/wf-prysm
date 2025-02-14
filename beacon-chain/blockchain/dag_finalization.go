@@ -215,25 +215,25 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 			syncSlot++
 			continue
 		}
-		if len(roots) == 1 {
-			syncRoot = roots[0]
-		} else {
-			for _, r := range roots {
-				canonical, err := s.IsCanonical(ctx, r)
-				if err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"syncSlot": syncSlot,
-						"headSlot": s.headSlot(),
-						"headRoot": fmt.Sprintf("%#x", s.headRoot()),
-					}).Error("Gwat sync: failed 2")
-					return err
-				}
-				if canonical {
-					syncRoot = r
-					break
-				}
+		//if len(roots) == 1 {
+		//	syncRoot = roots[0]
+		//} else {
+		for _, r := range roots {
+			canonical, err := s.IsCanonical(ctx, r)
+			if err != nil {
+				log.WithError(err).WithFields(logrus.Fields{
+					"syncSlot": syncSlot,
+					"headSlot": s.headSlot(),
+					"headRoot": fmt.Sprintf("%#x", s.headRoot()),
+				}).Error("Gwat sync: failed 2")
+				return err
+			}
+			if canonical {
+				syncRoot = r
+				break
 			}
 		}
+		//}
 
 		log.WithFields(logrus.Fields{
 			"syncSlot": syncSlot,
