@@ -151,7 +151,11 @@ func calculateHeadRootByNodesIndexes(
 	sort.Sort(nodeIndexes)
 
 	// fill ForkChoice instance
-	var headRoot [32]byte
+	var (
+		justifiedEpoch types.Epoch = 0
+		finalizedEpoch types.Epoch = 0
+	)
+
 	for _, index := range nodeIndexes {
 		n := diffNodes[index]
 		n.bestChild = NonExistentNode
@@ -177,7 +181,11 @@ func calculateHeadRootByNodesIndexes(
 		if err != nil {
 			return [32]byte{}, err
 		}
-
+		//set top node
+		if n.JustifiedEpoch() >= justifiedEpoch {
+			justifiedEpoch = n.JustifiedEpoch()
+			finalizedEpoch = n.FinalizedEpoch()
+		}
 		// sort validators' indexes
 		validatorIndexes := make(gwatCommon.SorterAscU64, 0, len(n.AttestationsData().Votes()))
 		for ix := range n.AttestationsData().Votes() {
@@ -210,10 +218,8 @@ func calculateHeadRootByNodesIndexes(
 			}
 		}
 	}
-	topNode := fcBase.store.nodes[len(fcBase.store.nodes)-1]
-
 	// apply LMD GHOST
-	headRoot, err := fcBase.Head(ctx, topNode.justifiedEpoch, justifiedRoot, fcBase.balances, topNode.finalizedEpoch)
+	headRoot, err := fcBase.Head(ctx, justifiedEpoch, justifiedRoot, fcBase.balances, finalizedEpoch)
 
 	if err != nil {
 		return [32]byte{}, err
