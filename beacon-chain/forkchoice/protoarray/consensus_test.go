@@ -1294,7 +1294,7 @@ func TestGetParentByOptimisticSpines_SelectTopNode_2(t *testing.T) {
 	//  	   9  10 <- head by votes
 	r, err = f.Head(context.Background(), 0, cpRoot_0, balances, 0)
 	require.NoError(t, err)
-	assert.Equal(t, nrToHash(1), r, "Incorrect head with justified epoch at 0")
+	assert.Equal(t, nrToHash(10), r, "Incorrect head with justified epoch at 0")
 
 	nodesRootIndexMap = map[[32]byte]uint64{
 		nrToHash(0): 0,
