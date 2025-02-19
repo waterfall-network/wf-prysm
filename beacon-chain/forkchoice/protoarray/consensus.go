@@ -323,7 +323,15 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 			// check prefix matches to optSpines
 			prefOptSpines := []gwatCommon.HashArray{}
 			if len(forkOptSpines) > len(finalization) {
-				prefOptSpines = forkOptSpines[len(finalization):]
+				if len(finalization) > 0 {
+					termFin := finalization[len(finalization)-1]
+					termIndex := indexOfOptimisticSpines(termFin, forkOptSpines)
+					if termIndex >= 0 {
+						prefOptSpines = forkOptSpines[termIndex+1:]
+					}
+				} else {
+					prefOptSpines = forkOptSpines
+				}
 			}
 			prefix := node.spinesData.Prefix()
 			if params.BeaconConfig().IsFcTgTreeForkSlot(node.slot) {
@@ -371,16 +379,16 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 
 			// check the first published spine matches to prefOptSpines
 			pubOptSpines := []gwatCommon.HashArray{}
-			if len(prefix) > 0 && len(prefOptSpines) > len(prefix) {
-				termPref := prefix[len(prefix)-1]
-				termIndex := 0
-				for j, opts := range prefOptSpines {
-					if opts.Has(termPref) {
-						termIndex = j
-						break
+			if len(prefOptSpines) > len(prefix) {
+				if len(prefix) > 0 {
+					termPref := prefix[len(prefix)-1]
+					termIndex := indexOfOptimisticSpines(termPref, prefOptSpines)
+					if termIndex >= 0 {
+						pubOptSpines = prefOptSpines[termIndex+1:]
 					}
+				} else {
+					pubOptSpines = prefOptSpines
 				}
-				pubOptSpines = prefOptSpines[termIndex+1:]
 			}
 
 			log.WithFields(logrus.Fields{

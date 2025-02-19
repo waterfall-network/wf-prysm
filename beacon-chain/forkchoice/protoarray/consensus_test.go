@@ -684,7 +684,7 @@ func Test_collectTgTreeNodesByOptimisticSpines_1_forks(t *testing.T) {
 		nrToHash(4): 4,
 	}
 	wantLeafs := map[[32]byte]int{
-		nrToHash(0): 1,
+		nrToHash(2): 3,
 		nrToHash(4): 3,
 		nrToHash(3): 4,
 	}
@@ -1120,7 +1120,7 @@ func Test_collectTgTreeNodesByOptimisticSpines_1_forks_FcTgTreeForkSlot(t *testi
 		nrToHash(4): 4,
 	}
 	wantLeafs := map[[32]byte]int{
-		nrToHash(0): 1,
+		nrToHash(2): 3,
 		nrToHash(3): 4,
 		nrToHash(4): 3,
 	}
