@@ -371,8 +371,16 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 
 			// check the first published spine matches to prefOptSpines
 			pubOptSpines := []gwatCommon.HashArray{}
-			if len(prefOptSpines) > len(prefix) {
-				pubOptSpines = prefOptSpines[len(prefix):]
+			if len(prefix) > 0 && len(prefOptSpines) > len(prefix) {
+				termPref := prefix[len(prefix)-1]
+				termIndex := 0
+				for j, opts := range prefOptSpines {
+					if opts.Has(termPref) {
+						termIndex = j
+						break
+					}
+				}
+				pubOptSpines = prefOptSpines[termIndex+1:]
 			}
 
 			log.WithFields(logrus.Fields{
