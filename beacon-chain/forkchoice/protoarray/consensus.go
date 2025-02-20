@@ -227,6 +227,10 @@ func calculateHeadRootByNodesIndexes(
 	return headRoot, nil
 }
 
+// collectTgTreeNodesByOptimisticSpines calculates T(G) tree comparable to optimistic spines.
+// Returns
+// 1. T(G) tree nodes as nodeRoot/fcIndex map
+// 2. leafs of acceptable forks as nodeRoot/forkLength
 func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon.HashArray, jCpRoot [32]byte) (map[[32]byte]uint64, map[[32]byte]int) {
 	forks := fc.GetForks()
 	rootIndexMap := make(map[[32]byte]uint64)
