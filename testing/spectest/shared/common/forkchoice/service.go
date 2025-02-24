@@ -71,6 +71,10 @@ type engineMock struct {
 	powBlocks map[[32]byte]*ethpb.PowBlock
 }
 
+func (m *engineMock) IsTxLogValid() bool {
+	return false
+}
+
 func (m *engineMock) ExecutionDagSyncSlotInfo(ctx context.Context, params *gwatTypes.SlotInfo) (bool, error) {
 	//TODO implement me
 	panic("implement me")
