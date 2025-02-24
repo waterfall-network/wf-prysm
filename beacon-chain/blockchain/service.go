@@ -220,10 +220,10 @@ func (s *Service) IsSynced() bool {
 }
 
 func (s *Service) IsValOpPoolValid() bool {
-	if s.cfg.BlockFetcher == nil {
+	if s.cfg.ExecutionEngineCaller == nil {
 		return false
 	}
-	return s.cfg.BlockFetcher.IsTxLogValid()
+	return s.cfg.ExecutionEngineCaller.IsTxLogValid()
 }
 
 // IsGwatSynchronizing returns true if shard-node is not synchronized otherwise - false.
