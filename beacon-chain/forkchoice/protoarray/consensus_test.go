@@ -1129,6 +1129,208 @@ func Test_collectTgTreeNodesByOptimisticSpines_1_forks_FcTgTreeForkSlot(t *testi
 	require.DeepEqual(t, wantLeafs, leafs)
 }
 
+func TestGetParentByOptimisticSpines_SelectTopNode(t *testing.T) {
+	balances := []uint64{1, 1}
+	cpRoot_0 := nrToHash(0)
+	cpRoot_1 := nrToHash(1)
+	cpRoot_2 := nrToHash(2)
+	cpRoot_3 := nrToHash(3)
+
+	var (
+		r, hRoot          [32]byte
+		err, hrErr        error
+		nodesRootIndexMap map[[32]byte]uint64
+	)
+
+	f := New(2, 1)
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, nrToHash(0), params.BeaconConfig().ZeroHash, 0, 0, cpRoot_0[:], cpRoot_0[:], nil))
+
+	r, err = f.Head(context.Background(), 0, nrToHash(0), balances, 0)
+	require.NoError(t, err)
+	assert.Equal(t, nrToHash(0), r, "Incorrect head with genesis")
+
+	nodesRootIndexMap = map[[32]byte]uint64{nrToHash(0): 0}
+	fcBase, _, diffNodes := getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_0)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(0), hRoot, "Incorrect head with justified epoch at 0")
+
+	// Define the following tree:
+	//	     	                           0
+	//  	                              / \
+	//  justified: 2, finalization: 1 -> 1   2 <- justified: 2, finalization: 1
+	//          	                     |   |
+	//  justified: 3, finalization: 2 -> 3   4 <- justified: 2, finalization: 1
+	// 	           	               		 |   |
+	//  justified: 3, finalization: 2 -> 5   6 <- justified: 2, finalization: 1
+	//                              	 |   |
+	//  justified: 3, finalization: 2 -> 7   8 <- justified: 2, finalization: 1
+	//                              	 |   |
+	//  justified: 3, finalization: 2 -> 9  10 <- justified: 2, finalization: 1
+	// Left branch.
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, nrToHash(1), nrToHash(0), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, nrToHash(2), nrToHash(0), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, nrToHash(3), nrToHash(1), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, nrToHash(4), nrToHash(2), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 5, nrToHash(5), nrToHash(3), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 6, nrToHash(6), nrToHash(4), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 7, nrToHash(7), nrToHash(5), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 8, nrToHash(8), nrToHash(6), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 9, nrToHash(9), nrToHash(7), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 10, nrToHash(10), nrToHash(8), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+
+	// Add a votes to the left(odd) branch
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(1), 2)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(3), 3)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(5), 3)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(7), 3)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(9), 3)
+
+	// With the additional vote to the left branch, the head should be 9:
+	//           0  <-- start
+	//          / \
+	//         1   2
+	//         |   |
+	//         3   4
+	//         |   |
+	//         5   6
+	//         |   |
+	//         7   8
+	//         |   |
+	// head -> 9  10
+	r, err = f.Head(context.Background(), 0, nrToHash(0), balances, 0)
+	require.NoError(t, err)
+	assert.Equal(t, nrToHash(9), r, "Incorrect head with justified epoch at 0")
+
+	nodesRootIndexMap = map[[32]byte]uint64{
+		nrToHash(0): 0,
+		nrToHash(1): 1,
+		nrToHash(3): 2,
+		nrToHash(5): 5,
+		nrToHash(7): 7,
+		nrToHash(9): 9,
+
+		nrToHash(2):  2,
+		nrToHash(4):  2,
+		nrToHash(6):  6,
+		nrToHash(8):  8,
+		nrToHash(10): 10,
+	}
+	fcBase, _, diffNodes = getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_3)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(9), hRoot, "Incorrect head with justified epoch at 0")
+}
+
+func TestGetParentByOptimisticSpines_SelectTopNode_2(t *testing.T) {
+	balances := []uint64{1, 1}
+	cpRoot_0 := nrToHash(0)
+	cpRoot_1 := nrToHash(1)
+	cpRoot_2 := nrToHash(2)
+	cpRoot_3 := nrToHash(3)
+
+	var (
+		r, hRoot          [32]byte
+		err, hrErr        error
+		nodesRootIndexMap map[[32]byte]uint64
+	)
+
+	f := New(2, 1)
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, nrToHash(0), params.BeaconConfig().ZeroHash, 0, 0, cpRoot_0[:], cpRoot_0[:], nil))
+
+	r, err = f.Head(context.Background(), 0, nrToHash(0), balances, 0)
+	require.NoError(t, err)
+	assert.Equal(t, nrToHash(0), r, "Incorrect head with genesis")
+
+	nodesRootIndexMap = map[[32]byte]uint64{nrToHash(0): 0}
+	fcBase, _, diffNodes := getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_0)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(0), hRoot, "Incorrect head with justified epoch at 0")
+
+	// Define the following tree:
+	//	     	                           0
+	//  	                              / \
+	//  justified: 2, finalization: 1 -> 1   2 <- justified: 2, finalization: 1
+	//          	                     |   |
+	//  justified: 3, finalization: 2 -> 3   4 <- justified: 2, finalization: 1
+	// 	           	               		 |   |
+	//  justified: 3, finalization: 2 -> 5   6 <- justified: 2, finalization: 1
+	//                              	 |   |
+	//  justified: 3, finalization: 2 -> 7   8 <- justified: 2, finalization: 1
+	//                              	 |   |
+	//  justified: 3, finalization: 2 -> 9  10 <- justified: 2, finalization: 1
+	// Left branch.
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, nrToHash(1), nrToHash(0), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, nrToHash(2), nrToHash(0), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, nrToHash(3), nrToHash(1), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, nrToHash(4), nrToHash(2), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 5, nrToHash(5), nrToHash(3), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 6, nrToHash(6), nrToHash(4), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 7, nrToHash(7), nrToHash(5), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 8, nrToHash(8), nrToHash(6), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 9, nrToHash(9), nrToHash(7), 3, 2, cpRoot_3[:], cpRoot_2[:], nil))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 10, nrToHash(10), nrToHash(8), 2, 1, cpRoot_2[:], cpRoot_1[:], nil))
+
+	// Add a votes to the left(odd) branch
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(2), 2)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(4), 2)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(6), 2)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(8), 2)
+	f.ProcessAttestation(context.Background(), []uint64{0}, nrToHash(10), 2)
+
+	// With the additional vote to the left branch, the head should be 9:
+	//           0  <-- start
+	//          / \
+	//         1   2
+	//         |   |
+	//         3   4
+	//         |   |
+	//         5   6
+	//         |   |
+	//         7   8
+	//         |   |
+	//  	   9  10 <- head by votes
+	r, err = f.Head(context.Background(), 0, cpRoot_0, balances, 0)
+	require.NoError(t, err)
+	assert.Equal(t, nrToHash(10), r, "Incorrect head with justified epoch at 0")
+
+	nodesRootIndexMap = map[[32]byte]uint64{
+		nrToHash(0): 0,
+		nrToHash(1): 1,
+		nrToHash(3): 2,
+		nrToHash(5): 5,
+		nrToHash(7): 7,
+		nrToHash(9): 9,
+
+		nrToHash(2):  2,
+		nrToHash(4):  2,
+		nrToHash(6):  6,
+		nrToHash(8):  8,
+		nrToHash(10): 10,
+	}
+
+	fcBase, _, diffNodes = getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_0)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(10), hRoot, "Incorrect head with justified epoch at 0")
+
+	fcBase, _, diffNodes = getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_1)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(9), hRoot, "Incorrect head with justified epoch at 0")
+
+	fcBase, _, diffNodes = getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_2)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(10), hRoot, "Incorrect head with justified epoch at 0")
+
+	fcBase, _, diffNodes = getCompatibleFc(nodesRootIndexMap, f)
+	hRoot, hrErr = calculateHeadRootByNodesIndexes(context.Background(), fcBase, diffNodes, nodesRootIndexMap, cpRoot_3)
+	require.NoError(t, hrErr)
+	assert.Equal(t, nrToHash(9), hRoot, "Incorrect head with justified epoch at 0")
+}
+
 // NO cpFinalized terminal spine in optimistic spines
 // Accepted by empty prefix condition
 // `if isExtended || len(published) == 0 {`
