@@ -131,12 +131,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}(time.Now(), slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 
 	log.WithFields(logrus.Fields{
-		"blSlot":            signed.Block().Slot(),
-		"root":              fmt.Sprintf("%#x", blockRoot),
-		"parentRoot":        fmt.Sprintf("%#x", signed.Block().ParentRoot()),
-		"delegateFork":      params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()),
-		"gwatSynchronizing": s.IsGwatSynchronizing(),
-		"\u2692":            version.BuildId,
+		"blSlot":               signed.Block().Slot(),
+		"root":                 fmt.Sprintf("%#x", blockRoot),
+		"parentRoot":           fmt.Sprintf("%#x", signed.Block().ParentRoot()),
+		"gwatSynchronizing":    s.IsGwatSynchronizing(),
+		"delegateFork":         params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()),
+		"s.isSynchronizing()":  s.isSynchronizing(),
+		"s.IsValOpPoolValid()": s.IsValOpPoolValid(),
+		"\u2692":               version.BuildId,
 	}).Info("onBlock: start")
 
 	if len(signed.Block().Body().Withdrawals()) > 0 {
@@ -167,6 +169,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					}).Error("onBlock: withdrawal")
 					return err
 				}
+			} else {
+				log.WithFields(logrus.Fields{
+					"i":              i,
+					"slot":           signed.Block().Slot(),
+					"Amount":         fmt.Sprintf("%d", itm.Amount),
+					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+					"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
+					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+				}).Warn("onBlock: withdrawal skipped verify")
 			}
 		}
 	}
@@ -195,6 +207,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					}).Error("onBlock: exit")
 					return err
 				}
+			} else {
+				log.WithFields(logrus.Fields{
+					"i":              i,
+					"slot":           signed.Block().Slot(),
+					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+				}).Warn("onBlock: exit skipped verify")
 			}
 		}
 	}
