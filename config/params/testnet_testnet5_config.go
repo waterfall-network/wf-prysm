@@ -43,6 +43,7 @@ func Testnet5Config() *BeaconChainConfig {
 	cfg.BlockVotingForkSlot = 0
 	cfg.ValSyncProcForkSlot = math.MaxUint64
 	cfg.FcTgTreeForkSlot = 0
+	cfg.ValOpVerifyForkSlot = 0
 	//cfg.SlotsPerArchivedPoint = 2048
 
 	//cfg.SlotsPerEpoch = 32

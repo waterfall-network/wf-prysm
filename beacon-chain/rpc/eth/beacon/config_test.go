@@ -125,6 +125,7 @@ func TestGetSpec(t *testing.T) {
 	config.ValSyncProcForkSlot = 2048
 	config.BlockVotingForkSlot = 1024
 	config.FcTgTreeForkSlot = 3072
+	config.ValOpVerifyForkSlot = 1024
 	config.PrevotingDisabled = true
 
 	var dbp [4]byte
@@ -155,7 +156,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 118, len(resp.Data))
+	assert.Equal(t, 119, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -406,6 +407,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "1024", v)
 		case "FC_TG_TREE_FORK_SLOT":
 			assert.Equal(t, "3072", v)
+		case "VAL_OP_VERIFY_FORK_SLOT":
+			assert.Equal(t, "1024", v)
 		case "ALL_SPINES_LIMIT":
 			assert.Equal(t, "128", v)
 		case "PREVOTING_DISABLED":
