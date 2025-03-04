@@ -160,6 +160,7 @@ type BeaconChainConfig struct {
 	BlockVotingForkSlot types.Slot  `yaml:"BLOCK_VOTING_FORK_SLOT" spec:"true"`  // BlockVotingForkSlot defines the slot to start to calculate eth1Data by finalized state.
 	ValSyncProcForkSlot types.Slot  `yaml:"VAL_SYNC_PROC_FORK_SLOT" spec:"true"` // ValSyncProcForkSlot defines the slot to start improved validator sync procedure.
 	FcTgTreeForkSlot    types.Slot  `yaml:"FC_TG_TREE_FORK_SLOT" spec:"true"`    // FcTgTreeForkSlot defines the slot to start improved algorithm to build T(G) Tree.
+	ValOpVerifyForkSlot types.Slot  `yaml:"VAL_OP_VERIFY_FORK_SLOT" spec:"true"` // ValOpVerifyForkSlot defines the slot to start fixed verification validator sync op onBlock action.
 	// Deprecated
 	BellatrixForkVersion []byte `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	// Deprecated
@@ -268,6 +269,10 @@ func (b *BeaconChainConfig) IsValSyncProcForkSlot(slot types.Slot) bool {
 
 func (b *BeaconChainConfig) IsFcTgTreeForkSlot(slot types.Slot) bool {
 	return b.FcTgTreeForkSlot <= slot
+}
+
+func (b *BeaconChainConfig) IsValOpVerifyForkSlot(slot types.Slot) bool {
+	return b.ValOpVerifyForkSlot <= slot
 }
 
 // MinSeedLookahead is the duration of randao look ahead seed.
