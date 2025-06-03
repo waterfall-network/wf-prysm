@@ -621,7 +621,7 @@ func (s *Service) checkAnyWithdrawalsInParentState(preState state.BeaconState, o
 		validator := vals[itm.ValidatorIndex]
 		for _, wop := range validator.WithdrawalOps {
 			if bytes.Equal(wop.Hash, itm.InitTxHash) {
-				return fmt.Errorf("valSyncOp exists in parent state op=withdrawal initTx=%#x", "", itm.InitTxHash)
+				return fmt.Errorf("valSyncOp exists in parent state op=withdrawal initTx=%#x", itm.InitTxHash)
 			}
 		}
 	}
@@ -640,7 +640,7 @@ func (s *Service) checkAnyExitsInParentState(preState state.BeaconState, ops []*
 		validator := vals[itm.ValidatorIndex]
 		for _, wop := range validator.WithdrawalOps {
 			if bytes.Equal(wop.Hash, itm.InitTxHash) {
-				return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", "", itm.InitTxHash)
+				return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", itm.InitTxHash)
 			}
 		}
 	}
@@ -672,7 +672,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal PublicKey mismatch with leaf state")
-					return notFoundOps, fmt.Errorf("valSyncOp PublicKey missmatch with leaf state op=withdrawal initTx=%#x", "", itm.InitTxHash)
+					return notFoundOps, fmt.Errorf("valSyncOp PublicKey missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				if wop.Amount != itm.Amount {
 					log.WithFields(logrus.Fields{
@@ -683,7 +683,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal Amount mismatch with leaf state")
-					return notFoundOps, fmt.Errorf("valSyncOp Amount missmatch with leaf state op=withdrawal initTx=%#x", "", itm.InitTxHash)
+					return notFoundOps, fmt.Errorf("valSyncOp Amount missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				log.WithFields(logrus.Fields{
 					"stSlot":         leafSt.Slot(),
