@@ -1623,3 +1623,247 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
+
+func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
+	ctx := context.Background()
+
+	params.BeaconConfig().DelegateForkSlot = 0
+	beaconDB := testDB.SetupDB(t)
+
+	fcs := protoarray.New(0, 0)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithWithdrawalPool(withdrawals.NewPool()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	type CallParams struct {
+		ops []*ethpb.Withdrawal
+		st  state.BeaconState
+	}
+
+	tests := []struct {
+		name          string
+		params        CallParams
+		time          uint64
+		wantErrString string
+	}{
+		{
+			name: "checkAnyWithdrawalsInParentState fail",
+			params: func() CallParams {
+				bstate, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
+					//WithdrawalOps: []*ethpb.WithdrawalOp{},
+				})
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   bytesutil.PadTo([]byte{0x11}, 32),
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+				val1, err := bstate.ValidatorAtIndex(0)
+				require.NoError(t, err)
+				ops := []*ethpb.Withdrawal{
+					{
+						ValidatorIndex: 1,
+						PublicKey:      val1.PublicKey,
+						Amount:         0,
+						InitTxHash:     bytesutil.PadTo([]byte{0x11}, 32),
+						Epoch:          1,
+					},
+				}
+				return CallParams{ops: ops, st: bstate}
+			}(),
+			wantErrString: "valSyncOp exists in parent state op=withdrawal initTx=0x11",
+		},
+		{
+			name: "checkAnyWithdrawalsInParentState success",
+			params: func() CallParams {
+				bstate, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
+					//WithdrawalOps: []*ethpb.WithdrawalOp{},
+				})
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   bytesutil.PadTo([]byte{0x11}, 32),
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+
+				val1, err := bstate.ValidatorAtIndex(0)
+				require.NoError(t, err)
+
+				ops := []*ethpb.Withdrawal{
+					{
+						ValidatorIndex: 1,
+						PublicKey:      val1.PublicKey,
+						Amount:         0,
+						InitTxHash:     bytesutil.PadTo([]byte{0x22}, 32),
+						Epoch:          1,
+					},
+					{
+						// out of actual validators range
+						ValidatorIndex: 1_000_000,
+						PublicKey:      val1.PublicKey,
+						Amount:         0,
+						InitTxHash:     bytesutil.PadTo([]byte{0x11}, 32),
+						Epoch:          1,
+					},
+				}
+				return CallParams{ops: ops, st: bstate}
+			}(),
+			wantErrString: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err = service.checkAnyWithdrawalsInParentState(tt.params.st, tt.params.ops)
+			if tt.wantErrString == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			}
+		})
+	}
+}
+
+func TestVerifyExitsInLeafState(t *testing.T) {
+	ctx := context.Background()
+
+	params.BeaconConfig().DelegateForkSlot = 0
+	beaconDB := testDB.SetupDB(t)
+
+	fcs := protoarray.New(0, 0)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithWithdrawalPool(withdrawals.NewPool()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	type CallParams struct {
+		ops []*ethpb.VoluntaryExit
+		st  state.BeaconState
+	}
+
+	tests := []struct {
+		name          string
+		params        CallParams
+		time          uint64
+		wantErrString string
+	}{
+		{
+			name: "checkAnyExitsInParentState fail",
+			params: func() CallParams {
+				bstate, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
+				})
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x22}, 32),
+				})
+				assert.NoError(t, err)
+
+				ops := []*ethpb.VoluntaryExit{
+					{
+						ValidatorIndex: 1,
+						InitTxHash:     bytesutil.PadTo([]byte{0x22}, 32),
+						Epoch:          1,
+					},
+				}
+				return CallParams{ops: ops, st: bstate}
+			}(),
+			wantErrString: "valSyncOp exists in parent state op=exit initTx=0x22",
+		},
+		{
+			name: "checkAnyExitsInParentState success",
+			params: func() CallParams {
+				bstate, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					//ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
+				})
+				assert.NoError(t, err)
+				err = bstate.AppendValidator(&ethpb.Validator{
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
+				})
+				assert.NoError(t, err)
+
+				ops := []*ethpb.VoluntaryExit{
+					{
+						ValidatorIndex: 0,
+						InitTxHash:     bytesutil.PadTo([]byte{0x22}, 32),
+						Epoch:          1,
+					},
+					{
+						// out of actual validators range
+						ValidatorIndex: 1_000_000,
+						InitTxHash:     bytesutil.PadTo([]byte{0x11}, 32),
+						Epoch:          1,
+					},
+				}
+				return CallParams{ops: ops, st: bstate}
+			}(),
+			wantErrString: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err = service.checkAnyExitsInParentState(tt.params.st, tt.params.ops)
+			if tt.wantErrString == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			}
+		})
+	}
+}

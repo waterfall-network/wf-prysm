@@ -644,7 +644,7 @@ func (s *Service) checkAnyExitsInParentState(preState state.BeaconState, ops []*
 		if err != nil {
 			return err
 		}
-		if bytes.Equal(validator.ExitHash, itm.InitTxHash) {
+		if bytesutil.ToBytes32(validator.ExitHash) != [32]byte{} {
 			return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", itm.InitTxHash)
 		}
 	}
