@@ -556,7 +556,7 @@ func (s *Service) verifyWithdrawalsInPool(block block.BeaconBlock) (notFoundOps 
 				"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Error("onBlock: valSyncOp: withdrawal is invalid")
-			return notFoundOps, err
+			return nil, err
 		}
 		log.WithFields(logrus.Fields{
 			"i":              i,
@@ -596,7 +596,7 @@ func (s *Service) verifyExitsInPool(block block.BeaconBlock) (notFoundOps []*eth
 				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
 				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
 			}).Error("onBlock: valSyncOp: exit is invalid")
-			return notFoundOps, err
+			return nil, err
 		}
 		log.WithFields(logrus.Fields{
 			"i":              i,
@@ -613,12 +613,15 @@ func (s *Service) checkAnyWithdrawalsInParentState(preState state.BeaconState, o
 	if len(ops) == 0 {
 		return nil
 	}
-	vals := preState.Validators()
+	valsNr := preState.NumValidators()
 	for _, itm := range ops {
-		if int(itm.ValidatorIndex) >= len(vals) {
+		if int(itm.ValidatorIndex) >= valsNr {
 			continue
 		}
-		validator := vals[itm.ValidatorIndex]
+		validator, err := preState.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return err
+		}
 		for _, wop := range validator.WithdrawalOps {
 			if bytes.Equal(wop.Hash, itm.InitTxHash) {
 				return fmt.Errorf("valSyncOp exists in parent state op=withdrawal initTx=%#x", itm.InitTxHash)
@@ -632,16 +635,17 @@ func (s *Service) checkAnyExitsInParentState(preState state.BeaconState, ops []*
 	if len(ops) == 0 {
 		return nil
 	}
-	vals := preState.Validators()
+	valsNr := preState.NumValidators()
 	for _, itm := range ops {
-		if int(itm.ValidatorIndex) >= len(vals) {
+		if int(itm.ValidatorIndex) >= valsNr {
 			continue
 		}
-		validator := vals[itm.ValidatorIndex]
-		for _, wop := range validator.WithdrawalOps {
-			if bytes.Equal(wop.Hash, itm.InitTxHash) {
-				return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", itm.InitTxHash)
-			}
+		validator, err := preState.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(validator.ExitHash, itm.InitTxHash) {
+			return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", itm.InitTxHash)
 		}
 	}
 	return nil
@@ -652,14 +656,17 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 	if len(ops) == 0 {
 		return notFoundOps, nil
 	}
-	vals := leafSt.Validators()
+	valsNr := leafSt.NumValidators()
 	for _, itm := range ops {
-		if int(itm.ValidatorIndex) >= len(vals) {
+		if int(itm.ValidatorIndex) >= valsNr {
 			notFoundOps = append(notFoundOps, itm)
 			continue
 		}
 		isValid := false
-		validator := vals[itm.ValidatorIndex]
+		validator, err := leafSt.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
 		for _, wop := range validator.WithdrawalOps {
 			if bytes.Equal(wop.Hash, itm.InitTxHash) {
 				//validate op data
@@ -672,7 +679,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal PublicKey mismatch with leaf state")
-					return notFoundOps, fmt.Errorf("valSyncOp PublicKey missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+					return nil, fmt.Errorf("valSyncOp PublicKey missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				if wop.Amount != itm.Amount {
 					log.WithFields(logrus.Fields{
@@ -683,7 +690,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal Amount mismatch with leaf state")
-					return notFoundOps, fmt.Errorf("valSyncOp Amount missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+					return nil, fmt.Errorf("valSyncOp Amount missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				log.WithFields(logrus.Fields{
 					"stSlot":         leafSt.Slot(),
@@ -709,13 +716,16 @@ func (s *Service) verifyExitsInLeafState(leafSt state.BeaconState, ops []*ethpb.
 	if len(ops) == 0 {
 		return notFoundOps, nil
 	}
-	vals := leafSt.Validators()
+	valsNr := leafSt.NumValidators()
 	for _, itm := range ops {
-		if int(itm.ValidatorIndex) >= len(vals) {
+		if int(itm.ValidatorIndex) >= valsNr {
 			notFoundOps = append(notFoundOps, itm)
 			continue
 		}
-		validator := vals[itm.ValidatorIndex]
+		validator, err := leafSt.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
 		//validate op data
 		if bytes.Equal(validator.ExitHash, itm.InitTxHash) {
 			log.WithFields(logrus.Fields{
