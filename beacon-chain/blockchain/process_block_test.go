@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/blockchain/testing"
@@ -1657,7 +1658,7 @@ func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
 				bstate, err := util.NewBeaconState()
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
@@ -1665,7 +1666,7 @@ func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
 				})
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
@@ -1699,7 +1700,7 @@ func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
 				bstate, err := util.NewBeaconState()
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
@@ -1707,7 +1708,7 @@ func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
 				})
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
@@ -1759,7 +1760,7 @@ func TestCheckAnyWithdrawalsInParentState(t *testing.T) {
 	}
 }
 
-func TestVerifyExitsInLeafState(t *testing.T) {
+func TestCheckAnyExitsInParentState(t *testing.T) {
 	ctx := context.Background()
 
 	params.BeaconConfig().DelegateForkSlot = 0
@@ -1792,14 +1793,14 @@ func TestVerifyExitsInLeafState(t *testing.T) {
 				bstate, err := util.NewBeaconState()
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
 				})
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x22}, 32),
@@ -1823,14 +1824,14 @@ func TestVerifyExitsInLeafState(t *testing.T) {
 				bstate, err := util.NewBeaconState()
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x00}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x00}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					//ExitHash:          bytesutil.PadTo([]byte{0x00}, 32),
 				})
 				assert.NoError(t, err)
 				err = bstate.AppendValidator(&ethpb.Validator{
-					PublicKey:         bytesutil.PadTo([]byte{0x01}, 32),
+					PublicKey:         bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength),
 					ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 					WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 					ExitHash:          bytesutil.PadTo([]byte{0x11}, 32),
@@ -1859,6 +1860,466 @@ func TestVerifyExitsInLeafState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err = service.checkAnyExitsInParentState(tt.params.st, tt.params.ops)
+			if tt.wantErrString == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, tt.wantErrString, err)
+			}
+		})
+	}
+}
+
+func TestVerifyBlkSyncOps(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ctx := context.Background()
+
+	params.BeaconConfig().DelegateForkSlot = 0
+	params.BeaconConfig().ValOpVerifyForkSlot = 0
+	beaconDB := testDB.SetupDB(t)
+	fcs := mock.NewMockForkChoicer(ctrl)
+	engCaller := mock.NewMockEngineCaller(ctrl)
+	engCaller.EXPECT().IsTxLogValid().Return(true).AnyTimes()
+
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithWithdrawalPool(withdrawals.NewPool()),
+		WithExecutionEngineCaller(engCaller),
+	}
+
+	service, err := NewService(ctx, opts...)
+
+	type CallParams struct {
+		block block.BeaconBlock
+		parSt state.BeaconState
+	}
+
+	tests := []struct {
+		name          string
+		params        CallParams
+		time          uint64
+		wantErrString string
+	}{
+		{
+			name: "verifyBlkSyncOps withdrawal fail: not found in leaves 1",
+			params: func() CallParams {
+				//op hash
+				initTxHash := bytesutil.PadTo([]byte{0x99, 0x99, 0x99, 0x99, 0x99}, 32)
+				//parentState
+				parentRoot := bytesutil.ToBytes32([]byte{0x01, 0x23, 0x45, 0x67, 0x89})
+				parentSt, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, parentSt, parentRoot))
+
+				// leaves statets
+				rootLeaf_1 := bytesutil.ToBytes32([]byte{0x11, 0x11, 0x11})
+				stLeaf_1, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_1.Copy(), rootLeaf_1))
+
+				rootLeaf_2 := bytesutil.ToBytes32([]byte{0x22, 0x22, 0x22})
+				stLeaf_2, err := util.NewBeaconState()
+				require.NoError(t, err)
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   initTxHash,
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_2.Copy(), rootLeaf_2))
+
+				rootLeaf_3 := bytesutil.ToBytes32([]byte{0x33, 0x33, 0x33})
+				stLeaf_3, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_3.Copy(), rootLeaf_3))
+
+				//mock leaves
+				fcs.EXPECT().Tips().Return([][32]byte{parentRoot, rootLeaf_1, rootLeaf_2, rootLeaf_3}, []types.Slot{4, 5, 6, 7}).AnyTimes()
+
+				//create block
+				blk1 := util.NewBeaconBlock()
+				blk1.Block.Slot = 8
+				blk1.Block.ParentRoot = parentRoot[:]
+				wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+				require.NoError(t, err)
+
+				return CallParams{block: wsb.Block(), parSt: parentSt}
+			}(),
+			wantErrString: "valSyncOp not found in leaves states",
+		},
+		{
+			name: "verifyBlkSyncOps withdrawal success: found in leaves 0",
+			params: func() CallParams {
+				//op hash
+				initTxHash := bytesutil.PadTo([]byte{0x99, 0x99, 0x99, 0x99, 0x99}, 32)
+
+				//parentState
+				parentRoot := bytesutil.ToBytes32([]byte{0x01, 0x23, 0x45, 0x67, 0x89})
+				parentSt, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				//validator index = 0
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, parentSt, parentRoot))
+
+				// leaves statets
+				rootLeaf_1 := bytesutil.ToBytes32([]byte{0x11, 0x11, 0x11})
+				stLeaf_1, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_1.Copy(), rootLeaf_1))
+
+				rootLeaf_2 := bytesutil.ToBytes32([]byte{0x22, 0x22, 0x22})
+				stLeaf_2, err := util.NewBeaconState()
+				require.NoError(t, err)
+				//validator index = 0
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   initTxHash,
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_2.Copy(), rootLeaf_2))
+
+				rootLeaf_3 := bytesutil.ToBytes32([]byte{0x33, 0x33, 0x33})
+				stLeaf_3, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_3.Copy(), rootLeaf_3))
+
+				//mock leaves
+				fcs.EXPECT().Tips().Return([][32]byte{parentRoot, rootLeaf_1, rootLeaf_2, rootLeaf_3}, []types.Slot{4, 5, 6, 7}).AnyTimes()
+
+				//create block
+				blk1 := util.NewBeaconBlock()
+				blk1.Block.Slot = 8
+				blk1.Block.ParentRoot = parentRoot[:]
+				val1, err := stLeaf_2.ValidatorAtIndex(1)
+				require.NoError(t, err)
+				blk1.Block.Body.Withdrawals = []*ethpb.Withdrawal{
+					{
+						ValidatorIndex: 1,
+						PublicKey:      val1.PublicKey,
+						Amount:         0,
+						InitTxHash:     initTxHash,
+						Epoch:          1,
+					},
+				}
+				wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+				require.NoError(t, err)
+
+				return CallParams{block: wsb.Block(), parSt: parentSt}
+			}(),
+			wantErrString: "",
+		},
+		{
+			name: "verifyBlkSyncOps withdrawal fail: found in leaves mismatch Amount",
+			params: func() CallParams {
+				//op hash
+				initTxHash := bytesutil.PadTo([]byte{0x99, 0x99, 0x99, 0x99, 0x99}, 32)
+
+				//parentState
+				parentRoot := bytesutil.ToBytes32([]byte{0x01, 0x23, 0x45, 0x67, 0x89})
+				parentSt, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				//validator index = 0
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, parentSt, parentRoot))
+
+				// leaves statets
+				rootLeaf_1 := bytesutil.ToBytes32([]byte{0x11, 0x11, 0x11})
+				stLeaf_1, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_1.Copy(), rootLeaf_1))
+
+				rootLeaf_2 := bytesutil.ToBytes32([]byte{0x22, 0x22, 0x22})
+				stLeaf_2, err := util.NewBeaconState()
+				require.NoError(t, err)
+				//validator index = 0
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   initTxHash,
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_2.Copy(), rootLeaf_2))
+
+				rootLeaf_3 := bytesutil.ToBytes32([]byte{0x33, 0x33, 0x33})
+				stLeaf_3, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_3.Copy(), rootLeaf_3))
+
+				//mock leaves
+				fcs.EXPECT().Tips().Return([][32]byte{parentRoot, rootLeaf_1, rootLeaf_2, rootLeaf_3}, []types.Slot{4, 5, 6, 7}).AnyTimes()
+
+				//create block
+				blk1 := util.NewBeaconBlock()
+				blk1.Block.Slot = 8
+				blk1.Block.ParentRoot = parentRoot[:]
+				val1, err := stLeaf_2.ValidatorAtIndex(1)
+				require.NoError(t, err)
+				blk1.Block.Body.Withdrawals = []*ethpb.Withdrawal{
+					{
+						ValidatorIndex: 1,
+						PublicKey:      val1.PublicKey,
+						Amount:         1_000_000,
+						InitTxHash:     initTxHash,
+						Epoch:          1,
+					},
+				}
+				wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+				require.NoError(t, err)
+
+				return CallParams{block: wsb.Block(), parSt: parentSt}
+			}(),
+			wantErrString: "valSyncOp Amount mismatch with leaf state",
+		},
+		{
+			name: "verifyBlkSyncOps withdrawal fail: found in leaves mismatch PubKey",
+			params: func() CallParams {
+				//op hash
+				initTxHash := bytesutil.PadTo([]byte{0x99, 0x99, 0x99, 0x99, 0x99}, 32)
+
+				//parentState
+				parentRoot := bytesutil.ToBytes32([]byte{0x01, 0x23, 0x45, 0x67, 0x89})
+				parentSt, err := util.NewBeaconState()
+				assert.NoError(t, err)
+				//validator index = 0
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = parentSt.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, parentSt, parentRoot))
+
+				// leaves statets
+				rootLeaf_1 := bytesutil.ToBytes32([]byte{0x11, 0x11, 0x11})
+				stLeaf_1, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_1.Copy(), rootLeaf_1))
+
+				rootLeaf_2 := bytesutil.ToBytes32([]byte{0x22, 0x22, 0x22})
+				stLeaf_2, err := util.NewBeaconState()
+				require.NoError(t, err)
+				//validator index = 0
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x11, 0x11}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+				})
+				assert.NoError(t, err)
+				//validator index = 1
+				err = stLeaf_2.AppendValidator(&ethpb.Validator{
+					PublicKey:             bytesutil.PadTo([]byte{0x00, 0x22, 0x22}, fieldparams.BLSPubkeyLength),
+					ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+					WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+					CreatorAddress:        make([]byte, 20),
+					WithdrawalCredentials: make([]byte, 20),
+					ActivationHash:        make([]byte, 32),
+					ExitHash:              make([]byte, 32),
+					WithdrawalOps: []*ethpb.WithdrawalOp{
+						{
+							Amount: 0,
+							Hash:   initTxHash,
+							Slot:   0,
+						},
+					},
+				})
+				assert.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_2.Copy(), rootLeaf_2))
+
+				rootLeaf_3 := bytesutil.ToBytes32([]byte{0x33, 0x33, 0x33})
+				stLeaf_3, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, stLeaf_3.Copy(), rootLeaf_3))
+
+				//mock leaves
+				fcs.EXPECT().Tips().Return([][32]byte{parentRoot, rootLeaf_1, rootLeaf_2, rootLeaf_3}, []types.Slot{4, 5, 6, 7}).AnyTimes()
+
+				//create block
+				blk1 := util.NewBeaconBlock()
+				blk1.Block.Slot = 8
+				blk1.Block.ParentRoot = parentRoot[:]
+				require.NoError(t, err)
+				blk1.Block.Body.Withdrawals = []*ethpb.Withdrawal{
+					{
+						ValidatorIndex: 1,
+						//bad PublicKey
+						PublicKey:  bytesutil.PadTo([]byte{0x00, 0x12, 0x34}, fieldparams.BLSPubkeyLength),
+						Amount:     0,
+						InitTxHash: initTxHash,
+						Epoch:      1,
+					},
+				}
+				wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+				require.NoError(t, err)
+
+				return CallParams{block: wsb.Block(), parSt: parentSt}
+			}(),
+			wantErrString: "valSyncOp PublicKey mismatch with leaf state",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err = service.verifyBlkSyncOps(service.ctx, tt.params.block, tt.params.parSt)
 			if tt.wantErrString == "" {
 				assert.NoError(t, err)
 			} else {

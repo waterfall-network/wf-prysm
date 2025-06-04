@@ -679,7 +679,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal PublicKey mismatch with leaf state")
-					return nil, fmt.Errorf("valSyncOp PublicKey missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+					return nil, fmt.Errorf("valSyncOp PublicKey mismatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				if wop.Amount != itm.Amount {
 					log.WithFields(logrus.Fields{
@@ -690,7 +690,7 @@ func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*
 						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
 						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
 					}).Error("onBlock: valSyncOp: withdrawal Amount mismatch with leaf state")
-					return nil, fmt.Errorf("valSyncOp Amount missmatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+					return nil, fmt.Errorf("valSyncOp Amount mismatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
 				}
 				log.WithFields(logrus.Fields{
 					"stSlot":         leafSt.Slot(),
