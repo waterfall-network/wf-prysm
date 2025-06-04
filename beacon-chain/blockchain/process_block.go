@@ -141,91 +141,19 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		"\u2692":               version.BuildId,
 	}).Info("onBlock: start")
 
-	if len(signed.Block().Body().Withdrawals()) > 0 {
-		for i, itm := range signed.Block().Body().Withdrawals() {
-			log.WithFields(logrus.Fields{
-				"i":              i,
-				"slot":           signed.Block().Slot(),
-				"Amount":         fmt.Sprintf("%d", itm.Amount),
-				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-				"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
-				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-			}).Info("onBlock: withdrawal")
-
-			if !s.IsGwatSynchronizing() &&
-				!s.isSynchronizing() &&
-				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
-				s.IsValOpPoolValid() &&
-				params.BeaconConfig().IsValOpVerifyForkSlot(signed.Block().Slot()) {
-				if err := s.cfg.WithdrawalPool.Verify(itm); err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"i":              i,
-						"slot":           signed.Block().Slot(),
-						"Amount":         fmt.Sprintf("%d", itm.Amount),
-						"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-						"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-						"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
-						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-					}).Error("onBlock: withdrawal")
-					return err
-				}
-			} else {
-				log.WithFields(logrus.Fields{
-					"i":              i,
-					"slot":           signed.Block().Slot(),
-					"Amount":         fmt.Sprintf("%d", itm.Amount),
-					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-					"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
-					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-				}).Warn("onBlock: withdrawal skipped verify")
-			}
-		}
-	}
-
-	if len(signed.Block().Body().VoluntaryExits()) > 0 {
-		for i, itm := range signed.Block().Body().VoluntaryExits() {
-			log.WithFields(logrus.Fields{
-				"i":              i,
-				"slot":           signed.Block().Slot(),
-				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-			}).Info("onBlock: exit")
-
-			if !s.IsGwatSynchronizing() &&
-				!s.isSynchronizing() &&
-				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
-				s.IsValOpPoolValid() &&
-				params.BeaconConfig().IsValOpVerifyForkSlot(signed.Block().Slot()) {
-				if err := s.cfg.ExitPool.Verify(itm); err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"i":              i,
-						"slot":           signed.Block().Slot(),
-						"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-						"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-					}).Error("onBlock: exit")
-					return err
-				}
-			} else {
-				log.WithFields(logrus.Fields{
-					"i":              i,
-					"slot":           signed.Block().Slot(),
-					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-				}).Warn("onBlock: exit skipped verify")
-			}
-		}
-	}
-
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error")
+		return err
+	}
+
+	err = s.verifyBlkSyncOps(ctx, b, preState)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"block.slot": signed.Block().Slot(),
+		}).Error("onBlock error: invalid sync operation")
 		return err
 	}
 
