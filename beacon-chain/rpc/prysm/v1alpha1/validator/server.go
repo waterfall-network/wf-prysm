@@ -271,8 +271,8 @@ func (s *Server) IsValOpPoolValid(epoch types.Epoch) bool {
 	if params.BeaconConfig().EpochsPerEth1VotingPeriod >= epoch {
 		return true
 	}
-	if s.ExecutionEngineCaller == nil {
+	if s.Eth1InfoFetcher == nil {
 		return false
 	}
-	return s.ExecutionEngineCaller.IsTxLogValid()
+	return s.Eth1InfoFetcher.IsTxLogValid()
 }
