@@ -12,6 +12,10 @@ type MockPOWChainInfoFetcher struct {
 	Errors       []error
 }
 
+func (m *MockPOWChainInfoFetcher) IsTxLogValid() bool {
+	return true
+}
+
 func (m *MockPOWChainInfoFetcher) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return uint64(0), &big.Int{}
 }
