@@ -816,7 +816,7 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 		return 0, nil
 	}
 
-	deposits := make([]*ethpb.Deposit, 0, headSt.Eth1Data().DepositCount-lastDepositIndex)
+	deposits := make([]*ethpb.Deposit, 0, cpDepositIndex-lastDepositIndex)
 	for {
 		bBlock, err := s.cfg.beaconDB.Block(s.ctx, currBlockHash)
 		if err != nil {

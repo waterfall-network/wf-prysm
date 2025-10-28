@@ -247,7 +247,19 @@ func (s *Service) StateTracker() {
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(chainEvtCh)
 	defer sub.Unsubscribe()
 
-	isBadDepositRoot := false
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//TODO ROLLBACK !!!!!!!!!!!!!!!
+	//isBadDepositRoot := false
+	isBadDepositRoot := true
 
 	for {
 		select {

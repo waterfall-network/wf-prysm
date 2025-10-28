@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/blockchain"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/cache"
@@ -263,4 +264,15 @@ func (vs *Server) getOptimisticSpine(ctx context.Context) ([]gwatCommon.HashArra
 		extOptSpines[offset+i] = a[i].Copy()
 	}
 	return extOptSpines, nil
+}
+
+// IsValOpPoolValid checks that validator sync ops are synchronized.
+func (s *Server) IsValOpPoolValid(epoch types.Epoch) bool {
+	if params.BeaconConfig().EpochsPerEth1VotingPeriod >= epoch {
+		return true
+	}
+	if s.ExecutionEngineCaller == nil {
+		return false
+	}
+	return s.ExecutionEngineCaller.IsTxLogValid()
 }

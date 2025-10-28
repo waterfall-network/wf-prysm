@@ -38,6 +38,13 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+	if !vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)),
+			"req.slot":         req.Slot,
+		}).Warn("GetAttestationData skipped: valSyncOp logs processing")
+		return nil, fmt.Errorf("syncing valSyncOps, not ready to respond")
+	}
 
 	//if vs.HeadFetcher.IsGwatSynchronizing() {
 	//	log.WithError(fmt.Errorf("GWAT synchronization process is running, not ready to respond")).WithFields(logrus.Fields{
