@@ -50,6 +50,13 @@ func (vs *Server) GetPrevoteData(ctx context.Context, req *ethpb.PreVoteRequest)
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+	if !vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)),
+			"req.slot":         req.Slot,
+		}).Warn("GetPrevoteData skipped: valSyncOp logs processing")
+		return nil, fmt.Errorf("syncing valSyncOps, not ready to respond")
+	}
 
 	// result is not depending on CommitteeIndex
 	res, err := vs.PrevoteCache.Get(ctx, req)

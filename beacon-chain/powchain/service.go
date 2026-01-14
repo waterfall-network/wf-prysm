@@ -91,6 +91,7 @@ type ChainInfoFetcher interface {
 	CurrentETH1ConnectionError() error
 	ETH1Endpoints() []string
 	ETH1ConnectionErrors() []error
+	IsTxLogValid() bool
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
