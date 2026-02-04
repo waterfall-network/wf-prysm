@@ -94,7 +94,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MinSeedLookahead * 10))
+	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MinSeedLookahead(0) * 10))
 	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		RandaoMixes: randaoMixes,
 		Slot:        slot,

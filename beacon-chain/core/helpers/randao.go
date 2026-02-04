@@ -23,7 +23,7 @@ func Seed(state state.ReadOnlyBeaconState, epoch types.Epoch, domain [bls.Domain
 	// See https://github.com/ethereum/consensus-specs/pull/1296 for
 	// rationale on why offset has to look down by 1.
 	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
-		params.BeaconConfig().MinSeedLookahead - 1
+		params.BeaconConfig().MinSeedLookahead(epoch) - 1
 
 	randaoMix, err := RandaoMix(state, lookAheadEpoch)
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/forkchoice/protoarray"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/operations/attestations"
 	mockp2p "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/p2p/testing"
+	mockPOW "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/powchain/testing"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/stategen"
 	v1 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/v1"
 	mockSync "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/sync/initial-sync/testing"
@@ -240,10 +241,11 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		SyncChecker:   &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:   &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		StateNotifier: chainService.StateNotifier(),
-		StateGen:      stategen.New(db),
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:     &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		StateNotifier:   chainService.StateNotifier(),
+		StateGen:        stategen.New(db),
+		Eth1InfoFetcher: &mockPOW.POWChain{},
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -330,9 +332,10 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		HeadFetcher: &mock.ChainService{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:     &mock.ChainService{},
+		TimeFetcher:     &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		Eth1InfoFetcher: &mockPOW.POWChain{},
 	}
 
 	req := &ethpb.AttestationDataRequest{

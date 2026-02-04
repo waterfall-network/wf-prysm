@@ -39,6 +39,10 @@ type POWChain struct {
 	Errors            []error
 }
 
+func (m *POWChain) IsTxLogValid() bool {
+	return true
+}
+
 func (m *POWChain) ExecutionDagGetCandidates(ctx context.Context, slot ethTypes.Slot) (gwatCommon.HashArray, error) {
 	var err error
 	candidates := make(gwatCommon.HashArray, len(m.HashesByHeight))
@@ -73,6 +77,10 @@ func (m *POWChain) GetHeaderByNumber(ctx context.Context, nr *big.Int) (*gwatTyp
 }
 
 func (m *POWChain) ExecutionDagValidateSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
+	panic("implement me")
+}
+
+func (m *POWChain) ExecutionDagSyncSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
 	panic("implement me")
 }
 

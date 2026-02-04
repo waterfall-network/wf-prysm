@@ -151,7 +151,11 @@ func calculateHeadRootByNodesIndexes(
 	sort.Sort(nodeIndexes)
 
 	// fill ForkChoice instance
-	var headRoot [32]byte
+	var (
+		justifiedEpoch types.Epoch = 0
+		finalizedEpoch types.Epoch = 0
+	)
+
 	for _, index := range nodeIndexes {
 		n := diffNodes[index]
 		n.bestChild = NonExistentNode
@@ -177,7 +181,11 @@ func calculateHeadRootByNodesIndexes(
 		if err != nil {
 			return [32]byte{}, err
 		}
-
+		//set top node
+		if n.JustifiedEpoch() >= justifiedEpoch {
+			justifiedEpoch = n.JustifiedEpoch()
+			finalizedEpoch = n.FinalizedEpoch()
+		}
 		// sort validators' indexes
 		validatorIndexes := make(gwatCommon.SorterAscU64, 0, len(n.AttestationsData().Votes()))
 		for ix := range n.AttestationsData().Votes() {
@@ -210,10 +218,8 @@ func calculateHeadRootByNodesIndexes(
 			}
 		}
 	}
-	topNode := fcBase.store.nodes[len(fcBase.store.nodes)-1]
-
 	// apply LMD GHOST
-	headRoot, err := fcBase.Head(ctx, topNode.justifiedEpoch, justifiedRoot, fcBase.balances, topNode.finalizedEpoch)
+	headRoot, err := fcBase.Head(ctx, justifiedEpoch, justifiedRoot, fcBase.balances, finalizedEpoch)
 
 	if err != nil {
 		return [32]byte{}, err
@@ -227,11 +233,22 @@ func calculateHeadRootByNodesIndexes(
 	return headRoot, nil
 }
 
+// collectTgTreeNodesByOptimisticSpines calculates T(G) tree comparable to optimistic spines.
+// Returns
+// 1. T(G) tree nodes as nodeRoot/fcIndex map
+// 2. leafs of acceptable forks as nodeRoot/forkLength
 func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon.HashArray, jCpRoot [32]byte) (map[[32]byte]uint64, map[[32]byte]int) {
 	forks := fc.GetForks()
 	rootIndexMap := make(map[[32]byte]uint64)
 	leafs := make(map[[32]byte]int)
 	nodesIndices := fc.store.cpyNodesIndices()
+
+	existedSpines := make(map[[32]byte]bool)
+	for _, opts := range optSpines {
+		for _, s := range opts {
+			existedSpines[s] = true
+		}
+	}
 
 	for frkNr, frk := range forks {
 		if frk == nil {
@@ -283,18 +300,30 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 
 			// check finalization matches to optSpines
 			finalization := node.spinesData.Finalization()
-			ok := isSequenceMatchOptimisticSpines(finalization, forkOptSpines)
+			var ok = true
+			if params.BeaconConfig().IsFcTgTreeForkSlot(node.slot) {
+				// check all finalized spines exist in optimistic spines
+				for _, s := range finalization {
+					if !existedSpines[s] {
+						ok = false
+						break
+					}
+				}
+			} else {
+				ok = isSequenceMatchOptimisticSpines(finalization, forkOptSpines)
+			}
 
 			log.WithFields(logrus.Fields{
-				"ok":           ok,
-				"frkNr":        frkNr,
-				"node.index":   i,
-				"node.slot":    node.slot,
-				"node.root":    fmt.Sprintf("%#x", node.root),
-				"jCpRoot":      fmt.Sprintf("%#x", jCpRoot),
-				"finalization": len(finalization),
-				"frkOptSpines": len(forkOptSpines),
-				"frkSlots":     frkSlots,
+				" ok":                 ok,
+				" frkNr":              frkNr,
+				" node.index":         i,
+				" node.slot":          node.slot,
+				" IsFcTgTreeForkSlot": params.BeaconConfig().IsFcTgTreeForkSlot(node.slot),
+				"node.root":           fmt.Sprintf("%#x", node.root),
+				"jCpRoot":             fmt.Sprintf("%#x", jCpRoot),
+				"finalization":        len(finalization),
+				"frkOptSpines":        len(forkOptSpines),
+				"frkSlots":            len(frkSlots),
 			}).Info("collectTgTreeNodesByOptimisticSpines: check finalization")
 
 			if !ok {
@@ -304,18 +333,31 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 			// check prefix matches to optSpines
 			prefOptSpines := []gwatCommon.HashArray{}
 			if len(forkOptSpines) > len(finalization) {
-				prefOptSpines = forkOptSpines[len(finalization):]
+				if len(finalization) > 0 {
+					termFin := finalization[len(finalization)-1]
+					termIndex := indexOfOptimisticSpines(termFin, forkOptSpines)
+					if termIndex >= 0 {
+						prefOptSpines = forkOptSpines[termIndex+1:]
+					}
+				} else {
+					prefOptSpines = forkOptSpines
+				}
 			}
 			prefix := node.spinesData.Prefix()
-			ok = isSequenceMatchOptimisticSpines(prefix, prefOptSpines)
+			if params.BeaconConfig().IsFcTgTreeForkSlot(node.slot) {
+				ok = isPrefixMatchOptimisticSpines(prefix, prefOptSpines)
+			} else {
+				ok = isSequenceMatchOptimisticSpines(prefix, prefOptSpines)
+			}
 
 			log.WithFields(logrus.Fields{
-				"ok":         ok,
-				"frkNr":      frkNr,
-				"node.index": i,
-				"node.slot":  node.slot,
-				"node.root":  fmt.Sprintf("%#x", node.root),
-				"frkSlots":   frkSlots,
+				" ok":                 ok,
+				" frkNr":              frkNr,
+				" node.index":         i,
+				" node.slot":          node.slot,
+				" IsFcTgTreeForkSlot": params.BeaconConfig().IsFcTgTreeForkSlot(node.slot),
+				"node.root":           fmt.Sprintf("%#x", node.root),
+				"frkSlots":            (frkSlots),
 			}).Info("collectTgTreeNodesByOptimisticSpines: check prefix")
 
 			if !ok {
@@ -348,7 +390,15 @@ func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon
 			// check the first published spine matches to prefOptSpines
 			pubOptSpines := []gwatCommon.HashArray{}
 			if len(prefOptSpines) > len(prefix) {
-				pubOptSpines = prefOptSpines[len(prefix):]
+				if len(prefix) > 0 {
+					termPref := prefix[len(prefix)-1]
+					termIndex := indexOfOptimisticSpines(termPref, prefOptSpines)
+					if termIndex >= 0 {
+						pubOptSpines = prefOptSpines[termIndex+1:]
+					}
+				} else {
+					pubOptSpines = prefOptSpines
+				}
 			}
 
 			log.WithFields(logrus.Fields{
@@ -410,6 +460,25 @@ func isSequenceMatchOptimisticSpines(seq gwatCommon.HashArray, optSpines []gwatC
 		}
 	}
 	return true
+}
+
+func isPrefixMatchOptimisticSpines(prefix gwatCommon.HashArray, optSpines []gwatCommon.HashArray) bool {
+	if len(prefix) == 0 {
+		return true
+	}
+	if len(prefix) > len(optSpines) {
+		return false
+	}
+	j := 0
+	for _, os := range optSpines {
+		if os.Has(prefix[j]) {
+			j++
+			if j == len(prefix) {
+				break
+			}
+		}
+	}
+	return j == len(prefix)
 }
 
 func indexOfOptimisticSpines(hash gwatCommon.Hash, optSpines []gwatCommon.HashArray) int {

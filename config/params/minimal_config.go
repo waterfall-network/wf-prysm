@@ -41,7 +41,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.CleanWithdrawalsAftEpochs = 100
 	minimalConfig.SqrRootSlotsPerEpoch = 2
-	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.EpochsPerEth1VotingPeriod = 4
 	minimalConfig.SlotsPerHistoricalRoot = 64
@@ -102,7 +101,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
 
-	// Ethereum PoW parameters.
+	// Shard chain parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
 	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
 	minimalConfig.DepositContractAddress = "0x282630916603531E25a075A4fe21c2B612a50105"

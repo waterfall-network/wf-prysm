@@ -30,6 +30,7 @@ const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
+const errIncorrectMerkleIndex = "received incorrect merkle index"
 
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
@@ -47,7 +48,6 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum uint64) error {
 
 	log.WithFields(logrus.Fields{
 		"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-		"lastEth.CpNr":         s.latestEth1Data.CpNr,
 		"-startBlk":            blkNum,
 		"-endBlk":              blkNum,
 	}).Info("=== LogProcessing: FilterQuery: ProcessETH1Block: 0000")
@@ -104,10 +104,17 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gwatTypes.Log) erro
 		}
 		return nil
 	}
+	if depositLog.Topics[0] == gwatValLog.EvtUpdateBalanceLogSignature {
+		if err := s.ProcessUpdateBalanceLog(ctx, depositLog); err != nil {
+			return errors.Wrap(err, "Could not process update balance log")
+		}
+		return nil
+	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
 	return nil
 }
 
+// ProcessWithdrawalLog processes the withdrawal log received from shard-node.
 func (s *Service) ProcessWithdrawalLog(ctx context.Context, wtdLog gwatTypes.Log) error {
 	pubkey, creatorAddr, valIndex, amtGwei, err := gwatValLog.UnpackWithdrawalLogData(wtdLog.Data)
 
@@ -131,18 +138,106 @@ func (s *Service) ProcessWithdrawalLog(ctx context.Context, wtdLog gwatTypes.Log
 		return errors.Wrap(err, "Could not unpack log (withdrawal)")
 	}
 
-	exit := &ethpb.Withdrawal{
+	withdrawal := &ethpb.Withdrawal{
 		PublicKey:      pubkey.Bytes(),
 		ValidatorIndex: types.ValidatorIndex(valIndex),
 		InitTxHash:     wtdLog.TxHash.Bytes(),
 		Amount:         amtGwei,
 		Epoch:          curEpoch + 2, // min 1 epoch to propagate op by network
 	}
-	s.cfg.withdrawalPool.InsertWithdrawal(ctx, exit)
+	s.cfg.withdrawalPool.InsertWithdrawal(ctx, withdrawal, wtdLog.BlockNumber)
+	return nil
+}
+
+func (s *Service) ProcessUpdateBalanceLog(ctx context.Context, upBalLog gwatTypes.Log) error {
+	initTxHash, creatorAddress, procEpoch, amount, err := gwatValLog.UnpackUpdateBalanceLogData(upBalLog.Data)
+
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"opTxHash": fmt.Sprintf("%#x", upBalLog.TxHash),
+		}).Error("Processing update balance log failed")
+		return errors.Wrap(err, "Could not unpack log (update balance)")
+	}
+
+	isRemoved := s.cfg.withdrawalPool.RemoveItem(initTxHash[:])
+	log.WithFields(logrus.Fields{
+		" initTxHash": fmt.Sprintf("%#x", initTxHash),
+		" isRemoved":  isRemoved,
+		"amount":      amount,
+		"creatorAddr": fmt.Sprintf("%#x", creatorAddress),
+		"procEpoch":   procEpoch,
+		"opTxHash":    fmt.Sprintf("%#x", upBalLog.TxHash),
+	}).Info("Processing update balance log")
 
 	return nil
 }
 
+func (s *Service) rmOutdatedWithdrawalsFromPool(curSlot types.Slot) error {
+	if !params.BeaconConfig().IsDelegatingStakeSlot(curSlot) {
+		curSlot = slots.CurrentSlot(s.cfg.finalizedStateAtStartup.GenesisTime())
+	}
+	var minSlot types.Slot = 0
+	staleAfterSlots := types.Slot(params.BeaconConfig().CleanWithdrawalsAftEpochs) * params.BeaconConfig().SlotsPerEpoch
+	if curSlot > staleAfterSlots {
+		minSlot = curSlot - staleAfterSlots
+	}
+
+	poolItems := s.cfg.withdrawalPool.CopyItems()
+	log.WithFields(logrus.Fields{
+		"curSlot":         curSlot,
+		"poolItems":       len(poolItems),
+		"staleAfterSlots": staleAfterSlots,
+		"minSlot":         minSlot,
+	}).Info("Remove outdated withdrawals: start")
+
+	for _, itm := range poolItems {
+		blNr := s.cfg.withdrawalPool.GetBlockNr(itm.InitTxHash)
+		if blNr == 0 {
+			isRemoved := s.cfg.withdrawalPool.RemoveItem(itm.InitTxHash)
+			log.WithFields(logrus.Fields{
+				"blNr":        blNr,
+				" initTxHash": fmt.Sprintf("%#x", itm.InitTxHash),
+				" isRemoved":  isRemoved,
+				"valIndex":    itm.ValidatorIndex,
+			}).Warn("Remove outdated withdrawals: bad block nr")
+			continue
+		}
+		blHeight := new(big.Int).SetUint64(blNr)
+		blSlot, err := s.BlockSlotByHeight(s.ctx, blHeight)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"blNr":        blNr,
+				" initTxHash": fmt.Sprintf("%#x", itm.InitTxHash),
+				" isRemoved":  false,
+				"valIndex":    itm.ValidatorIndex,
+			}).Error("Remove outdated withdrawals: failed to get block slot")
+			return errors.Wrap(err, "Could not get block slot")
+		}
+		if types.Slot(blSlot) > minSlot {
+			log.WithFields(logrus.Fields{
+				"blNr":        blNr,
+				"blSlot":      blSlot,
+				"minSlot":     minSlot,
+				" initTxHash": fmt.Sprintf("%#x", itm.InitTxHash),
+				" isRemoved":  false,
+				"valIndex":    itm.ValidatorIndex,
+			}).Info("Remove outdated withdrawals: item skipped")
+			continue
+		}
+		isRemoved := s.cfg.withdrawalPool.RemoveItem(itm.InitTxHash)
+		log.WithFields(logrus.Fields{
+			"blNr":        blNr,
+			"blSlot":      blSlot,
+			"minSlot":     minSlot,
+			" initTxHash": fmt.Sprintf("%#x", itm.InitTxHash),
+			" isRemoved":  isRemoved,
+			"valIndex":    itm.ValidatorIndex,
+		}).Info("Remove outdated withdrawals: item removed")
+	}
+	return nil
+}
+
+// ProcessExitLog processes the exit log received from shard-node.
 func (s *Service) ProcessExitLog(ctx context.Context, exitLog gwatTypes.Log) error {
 	pubkey, creatorAddr, valIndex, exitEpoch, err := gwatValLog.UnpackExitRequestLogData(exitLog.Data)
 
@@ -177,7 +272,6 @@ func (s *Service) ProcessExitLog(ctx context.Context, exitLog gwatTypes.Log) err
 		ValidatorIndex: types.ValidatorIndex(valIndex),
 		InitTxHash:     exitLog.TxHash.Bytes(),
 	}
-
 	s.cfg.exitPool.InsertVoluntaryExitByGwat(ctx, exit)
 
 	log.WithError(err).WithFields(logrus.Fields{
@@ -190,7 +284,7 @@ func (s *Service) ProcessExitLog(ctx context.Context, exitLog gwatTypes.Log) err
 }
 
 // ProcessDepositLog processes the log which had been received from
-// the ETH1.0 chain by trying to ascertain which participant deposited
+// the shard chain by trying to ascertain which participant deposited
 // in the contract.
 func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gwatTypes.Log) error {
 	pubkey, creatorAddr, withdrawalCredentials, amount, signature, depositIndex, err := gwatValLog.UnpackDepositLogData(depositLog.Data)
@@ -220,7 +314,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gwatTypes.Lo
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		return errors.Errorf("received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
+		return errors.Errorf("%s: wanted %d but got %d", errIncorrectMerkleIndex, s.lastReceivedMerkleIndex+1, index)
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -315,7 +409,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gwatTypes.Lo
 }
 
 // ProcessChainStart processes the log which had been received from
-// the ETH1.0 chain by trying to determine when to start the beacon chain.
+// the shard chain by trying to determine when to start the beacon chain.
 func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, blockNumber uint64) {
 	s.chainStartData.Chainstarted = true
 	s.chainStartData.GenesisBlock = blockNumber
@@ -377,7 +471,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		//	BlockHash:        &spineHash,
 		//}
 	}
-	logCount, err := s.GetDepositCount(ctx, gdcParam)
+	depositCount, err := s.GetDepositCount(ctx, gdcParam)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"gdcParam":             fmt.Sprintf("%v", gdcParam),
@@ -386,7 +480,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			"lastEth.BlockHash":    fmt.Sprintf("%#x", s.latestEth1Data.BlockHash),
 			"lastEth.BlockHeight":  s.latestEth1Data.BlockHeight,
 			"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-			"lastEth.CpNr":         s.latestEth1Data.CpNr,
 			"followBlockHeight":    s.followBlockHeight(ctx),
 			"Eth1FollowDistance":   params.BeaconConfig().Eth1FollowDistance,
 		}).Warn("=== LogProcessing: processPastLogs: get deposit count failed")
@@ -395,41 +488,14 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	log.WithFields(logrus.Fields{
 		"gdcParam":             fmt.Sprintf("%v", gdcParam),
-		"logCount":             logCount,
+		"depositCount":         depositCount,
 		"handleSlot":           s.lastHandledSlot,
 		"isDldFork":            params.BeaconConfig().IsDelegatingStakeSlot(s.lastHandledSlot),
-		"lastEth.CpHash":       fmt.Sprintf("%#x", s.latestEth1Data.CpHash),
 		"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-		"lastEth.CpNr":         s.latestEth1Data.CpNr,
 		"followBlockHeight":    s.followBlockHeight(ctx),
 		"Eth1FollowDistance":   params.BeaconConfig().Eth1FollowDistance,
 	}).Info("=== LogProcessing: processPastLogs")
 
-	// To store all blocks.
-	headersMap := make(map[uint64]*gwatTypes.Header)
-	// Batch request the desired headers and store them in a
-	// map for quick access.
-	requestHeaders := func(startBlk, endBlk uint64) error {
-		headers, err := s.batchRequestHeaders(startBlk, endBlk)
-		if err != nil {
-			return err
-		}
-		for i, h := range headers {
-			log.WithFields(logrus.Fields{
-				"i":                    i,
-				"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-				"lastEth.CpNr":         s.latestEth1Data.CpNr,
-				"startBlk":             startBlk,
-				"endBlk":               endBlk,
-				"bl.Nr":                h.Nr(),
-				"bl.Slot":              h.Slot,
-			}).Info("=== LogProcessing: processPastLogs: requestHeaders: iter")
-			if h != nil && h.Number != nil {
-				headersMap[h.Nr()] = h
-			}
-		}
-		return nil
-	}
 	latestFollowHeight := s.followBlockHeight(ctx)
 
 	batchSize := s.cfg.eth1HeaderReqLimit
@@ -446,9 +512,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 		log.WithFields(logrus.Fields{
 			"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-			"lastEth.CpNr":         s.latestEth1Data.CpNr,
 			"-startBlk":            start,
 			"-endBlk":              end,
+			"latestFollowHeight":   latestFollowHeight,
 		}).Info("=== LogProcessing: FilterQuery: processPastLogs: 11111")
 
 		query := gwat.FilterQuery{
@@ -460,7 +526,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			////handle deposit & exit only
 			//Topics: [][]gwatCommon.Hash{{gwatValLog.EvtDepositLogSignature, gwatValLog.EvtExitReqLogSignature}},
 		}
-		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
+		remainingLogs := depositCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
 		// reset our query and end block in this case.
 		withinLimit := remainingLogs < depositlogRequestLimit
@@ -482,35 +548,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			}
 			return err
 		}
-		// Only request headers before chainstart to correctly determine
-		// genesis.
-		if !s.chainStartData.Chainstarted {
-
-			log.WithFields(logrus.Fields{
-				"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-				"lastEth.CpNr":         s.latestEth1Data.CpNr,
-				"startBlk":             start,
-				"endBlk":               end,
-			}).Info("=== LogProcessing: processPastLogs: requestHeaders: 00000000")
-
-			if err := requestHeaders(start, end); err != nil {
-				return err
-			}
-		}
-
 		for _, filterLog := range logs {
 			if filterLog.BlockNumber > currentBlockNum {
-
-				log.WithFields(logrus.Fields{
-					"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-					"lastEth.CpNr":         s.latestEth1Data.CpNr,
-					"startBlk":             currentBlockNum,
-					"endBlk":               filterLog.BlockNumber - 1,
-				}).Info("=== LogProcessing: processPastLogs: requestHeaders: 11111111")
-
-				if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
-					return err
-				}
 				// set new block number after checking for chainstart for previous block.
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
 				currentBlockNum = filterLog.BlockNumber
@@ -520,16 +559,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			}
 		}
 
-		log.WithFields(logrus.Fields{
-			"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-			"lastEth.CpNr":         s.latestEth1Data.CpNr,
-			"startBlk":             currentBlockNum,
-			"endBlk":               end,
-		}).Info("=== LogProcessing: processPastLogs: requestHeaders: 22222222")
-
-		if err := s.checkHeaderRange(ctx, currentBlockNum, end, headersMap, requestHeaders); err != nil {
-			return err
-		}
 		currentBlockNum = end
 
 		if batchSize < s.cfg.eth1HeaderReqLimit {
@@ -584,7 +613,6 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 
 	log.WithFields(logrus.Fields{
 		"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-		"lastEth.CpNr":         s.latestEth1Data.CpNr,
 		"cond":                 requestedBlock > s.latestEth1Data.LastRequestedBlock && requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference,
 		"cond_0":               requestedBlock > s.latestEth1Data.LastRequestedBlock,
 		"cond_1":               requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference,
@@ -610,7 +638,6 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		log.WithFields(logrus.Fields{
 			"i":                    i,
 			"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
-			"lastEth.CpNr":         s.latestEth1Data.CpNr,
 		}).Info("=== LogProcessing: requestBatchedHeadersAndLogs: 1111")
 	}
 
@@ -727,7 +754,7 @@ func (s *Service) ProcessDepositBlock(deposit *ethpb.Deposit, depositIndex uint6
 
 	if index != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		return errors.Errorf("block deposit processing: received incorrect merkle index: wanted %d but got %d", s.lastReceivedMerkleIndex+1, index)
+		return errors.Errorf("block deposit processing: %s: wanted %d but got %d", errIncorrectMerkleIndex, s.lastReceivedMerkleIndex+1, index)
 	}
 	s.lastReceivedMerkleIndex = index
 
@@ -781,7 +808,7 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 	}
 	var (
 		lastDepositIndex = uint64(s.lastReceivedMerkleIndex + 1)
-		cpDepositIndex   = headSt.Eth1DepositIndex()
+		cpDepositIndex   = headSt.Eth1Data().DepositCount
 		currIndex        = cpDepositIndex
 		currBlockHash    = cpRoot
 	)
@@ -789,7 +816,7 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 		return 0, nil
 	}
 
-	deposits := make([]*ethpb.Deposit, 0, headSt.Eth1DepositIndex()-lastDepositIndex)
+	deposits := make([]*ethpb.Deposit, 0, cpDepositIndex-lastDepositIndex)
 	for {
 		bBlock, err := s.cfg.beaconDB.Block(s.ctx, currBlockHash)
 		if err != nil {
@@ -798,10 +825,19 @@ func (s *Service) handleFinalizedDeposits(cpRoot [32]byte) (int, error) {
 		if bBlock == nil {
 			return 0, fmt.Errorf("beacon block not found")
 		}
-		for _, dep := range bBlock.Block().Body().Deposits() {
+		for i := len(bBlock.Block().Body().Deposits()) - 1; i >= 0; i-- {
+			dep := bBlock.Block().Body().Deposits()[i]
 			deposits = append(deposits, dep)
 			currIndex--
 		}
+
+		log.WithFields(logrus.Fields{
+			"deposits":  len(bBlock.Block().Body().Deposits()),
+			"blSlot":    bBlock.Block().Slot(),
+			"lastIndex": lastDepositIndex,
+			"currIndex": currIndex,
+		}).Warn("=== LogProcessing: handleFinalizedDeposits")
+
 		if lastDepositIndex >= currIndex {
 			break
 		}

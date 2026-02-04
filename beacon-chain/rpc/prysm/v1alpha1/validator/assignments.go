@@ -3,9 +3,11 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/cache"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/feed"
 	statefeed "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/feed/state"
@@ -29,6 +31,13 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+	if !vs.IsValOpPoolValid(req.Epoch) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(req.Epoch),
+			"req.Epoch":        req.Epoch,
+		}).Warn("GetDuties skipped: valSyncOp logs processing")
+		return nil, status.Error(codes.Unavailable, "syncing valSyncOps, not ready to respond")
+	}
 	return vs.duties(ctx, req)
 }
 
@@ -38,6 +47,13 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNodeValidator_StreamDutiesServer) error {
 	if vs.SyncChecker.Syncing() {
 		return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+	if !vs.IsValOpPoolValid(req.Epoch) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(req.Epoch),
+			"req.Epoch":        req.Epoch,
+		}).Warn("StreamDuties skipped: valSyncOp logs processing")
+		return status.Error(codes.Unavailable, "syncing valSyncOps, not ready to respond")
 	}
 
 	// If we are post-genesis time, then set the current epoch to

@@ -71,12 +71,21 @@ type engineMock struct {
 	powBlocks map[[32]byte]*ethpb.PowBlock
 }
 
+func (m *engineMock) IsTxLogValid() bool {
+	return false
+}
+
 func (m *engineMock) ExecutionDagSyncSlotInfo(ctx context.Context, params *gwatTypes.SlotInfo) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
 func (m *engineMock) ExecutionDagValidateSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *engineMock) ExecutionDagSyncSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }

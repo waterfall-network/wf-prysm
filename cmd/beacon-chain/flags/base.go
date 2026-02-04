@@ -1,5 +1,5 @@
 // Package flags defines beacon-node specific runtime flags for
-// setting important values such as ports, eth1 endpoints, and more.
+// setting important values such as ports, shard-node  endpoints, and more.
 package flags
 
 import (
@@ -134,6 +134,11 @@ var (
 	BlockVotingForkSlot = &cli.Uint64Flag{
 		Name:  "block-voting-fork-slot",
 		Usage: "The slot to start fixed handling of BlockVoting.",
+		Value: 216000,
+	}
+	ValSyncProcForkSlot = &cli.Uint64Flag{
+		Name:  "val-sync-proc-fork-slot",
+		Usage: "The slot to start improved validator sync procedure.",
 		Value: math.MaxUint64,
 	}
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.

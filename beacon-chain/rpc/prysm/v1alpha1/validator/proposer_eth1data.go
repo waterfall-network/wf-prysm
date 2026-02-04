@@ -57,7 +57,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	if params.BeaconConfig().IsFinEth1ForkSlot(beaconState.Slot()) {
 		log.WithFields(logrus.Fields{
 			"slot":              beaconState.Slot(),
-			"forkSlot":          params.BeaconConfig().FinEth1ForkSlot,
 			"eth1.DepositCount": prevEth1Data.DepositCount,
 			"eth1.BlockHash":    fmt.Sprintf("%#x", prevEth1Data.BlockHash),
 			"eth1.DepositRoot":  fmt.Sprintf("%#x", prevEth1Data.DepositRoot),
@@ -95,7 +94,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	if cpSpineNum.Cmp(prevEth1BlockNr) < 0 || cpSpineNum.Cmp(prevEth1BlockNr) == 0 {
 		log.WithFields(logrus.Fields{
 			"slot":              beaconState.Slot(),
-			"forkSlot":          params.BeaconConfig().FinEth1ForkSlot,
 			"eth1.DepositCount": prevEth1Data.DepositCount,
 			"eth1.BlockHash":    fmt.Sprintf("%#x", prevEth1Data.BlockHash),
 			"eth1.DepositRoot":  fmt.Sprintf("%#x", prevEth1Data.DepositRoot),

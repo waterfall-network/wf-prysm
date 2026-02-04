@@ -215,25 +215,25 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 			syncSlot++
 			continue
 		}
-		if len(roots) == 1 {
-			syncRoot = roots[0]
-		} else {
-			for _, r := range roots {
-				canonical, err := s.IsCanonical(ctx, r)
-				if err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"syncSlot": syncSlot,
-						"headSlot": s.headSlot(),
-						"headRoot": fmt.Sprintf("%#x", s.headRoot()),
-					}).Error("Gwat sync: failed 2")
-					return err
-				}
-				if canonical {
-					syncRoot = r
-					break
-				}
+		//if len(roots) == 1 {
+		//	syncRoot = roots[0]
+		//} else {
+		for _, r := range roots {
+			canonical, err := s.IsCanonical(ctx, r)
+			if err != nil {
+				log.WithError(err).WithFields(logrus.Fields{
+					"syncSlot": syncSlot,
+					"headSlot": s.headSlot(),
+					"headRoot": fmt.Sprintf("%#x", s.headRoot()),
+				}).Error("Gwat sync: failed 2")
+				return err
+			}
+			if canonical {
+				syncRoot = r
+				break
 			}
 		}
+		//}
 
 		log.WithFields(logrus.Fields{
 			"syncSlot": syncSlot,
@@ -393,6 +393,9 @@ func (s *Service) runProcessDagFinalize() {
 					"Slot":      newHead.state.Slot(),
 					"cp.Epoch":  newHead.state.FinalizedCheckpoint().Epoch,
 				}).Info("Dag finalization: success")
+
+				//todo refactor
+				//go s.initDagSyncSpines()
 			}
 		}
 	}()
@@ -590,45 +593,7 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 
 	ffepoch := params.BeaconConfig().FarFutureEpoch
 
-	err = workState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
-		// activation
-		if validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch > workEpoch {
-			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Activate,
-				ProcEpoch:  uint64(validator.ActivationEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
-			})
-			log.WithFields(logrus.Fields{
-				"workEpoch":                 workEpoch,
-				"validator.ActivationEpoch": validator.ActivationEpoch,
-				"InitTxHash":                fmt.Sprintf("%#x", validator.ActivationHash),
-			}).Info("activate params")
-		}
-		// deactivation
-		if validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch > workEpoch {
-			validatorSyncData = append(validatorSyncData, &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Deactivate,
-				ProcEpoch:  uint64(validator.ExitEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
-			})
-
-			log.WithFields(logrus.Fields{
-				"workEpoch":           workEpoch,
-				"validator.ExitEpoch": validator.ExitEpoch,
-				"InitTxHash":          fmt.Sprintf("%#x", validator.ExitHash),
-			}).Info("Exit params")
-		}
-		return false, validator, nil
-	})
-	if err != nil {
-		return nil, err
-	}
+	minEpoch := cpState.FinalizedCheckpointEpoch()
 
 	// withdrawals (update balance) calculate for finalized cp
 	minSlot, err := slots.EpochStart(cpState.FinalizedCheckpointEpoch() + 1)
@@ -636,7 +601,57 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		return nil, err
 	}
 
-	err = cpState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
+	err = workState.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) (bool, *ethpb.Validator, error) {
+		// activation
+		isActivating := validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch > workEpoch
+		if params.BeaconConfig().IsFinEth1ForkSlot(headState.Slot()) {
+			isActivating = validator.ActivationEpoch < ffepoch && validator.ActivationEpoch > 0 && validator.ActivationEpoch >= minEpoch
+		}
+		if isActivating {
+			op := &gwatTypes.ValidatorSync{
+				OpType:     gwatTypes.Activate,
+				ProcEpoch:  uint64(validator.ActivationEpoch),
+				Index:      uint64(idx),
+				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:     nil,
+				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
+			}
+			validatorSyncData = append(validatorSyncData, op)
+			log.WithFields(logrus.Fields{
+				"slot":                currentSlot,
+				"minEpoch":            minEpoch,
+				"workEpoch":           workEpoch,
+				"valSyncOp":           op.Print(),
+				"val.ActivationEpoch": validator.ActivationEpoch,
+			}).Info("Validator sync params: activate")
+		}
+
+		// deactivation
+		isDeactivating := validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch > workEpoch
+		if params.BeaconConfig().IsFinEth1ForkSlot(headState.Slot()) {
+			isDeactivating = validator.ExitEpoch < ffepoch && validator.ExitEpoch > 0 && validator.ExitEpoch >= minEpoch
+		}
+		if isDeactivating {
+			op := &gwatTypes.ValidatorSync{
+				OpType:     gwatTypes.Deactivate,
+				ProcEpoch:  uint64(validator.ExitEpoch),
+				Index:      uint64(idx),
+				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:     nil,
+				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
+			}
+			validatorSyncData = append(validatorSyncData, op)
+
+			log.WithFields(logrus.Fields{
+				"slot":                currentSlot,
+				"minEpoch":            minEpoch,
+				"workEpoch":           workEpoch,
+				"valSyncOp":           op.Print(),
+				"validator.ExitEpoch": validator.ExitEpoch,
+			}).Info("Validator sync params: exit")
+		}
+
+		// withdrawal
 		for _, wop := range validator.WithdrawalOps {
 			if wop.Slot < minSlot {
 				continue
@@ -660,12 +675,12 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 			}
 			validatorSyncData = append(validatorSyncData, vsd)
 			log.WithFields(logrus.Fields{
-				"st.Slot":    currentSlot,
-				"wop.Slot":   wop.Slot,
-				"valSyncOp":  vsd.Print(),
-				"exit":       validator.ExitEpoch <= workEpoch,
-				"InitTxHash": fmt.Sprintf("%#x", wop.Hash),
-			}).Info("Withdrawals: Update balance params")
+				"slot":          currentSlot,
+				"minSlot":       minSlot,
+				"wop.Slot":      wop.Slot,
+				"valSyncOp":     vsd.Print(),
+				"isDeactivated": validator.ExitEpoch <= workEpoch,
+			}).Info("Validator sync params: update balance")
 		}
 		return false, validator, nil
 	})
@@ -877,4 +892,131 @@ func (s *Service) repairGwatFinalization(
 		}
 	}
 	return err
+}
+
+func (s *Service) initDagSyncSpines() {
+	currentSlot := s.CurrentSlot()
+	_, roots, err := s.cfg.BeaconDB.BlockRootsBySlot(s.ctx, currentSlot)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+		}).Error("Init Dag sync spines: get roots failed")
+		return
+	}
+	if len(roots) == 0 {
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+		}).Info("Init Dag sync spines: no roots")
+		return
+	}
+
+	for _, root := range roots {
+		if root == params.BeaconConfig().ZeroHash {
+			log.WithFields(logrus.Fields{
+				"currentSlot": currentSlot,
+				"headSlot":    s.headSlot(),
+				"root":        fmt.Sprintf("%#x", root),
+			}).Info("Init Dag sync spines: zero root")
+			continue
+		}
+		blockState, err := s.cfg.StateGen.StateByRoot(s.ctx, root)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"currentSlot": currentSlot,
+				"headSlot":    s.headSlot(),
+				"root":        fmt.Sprintf("%#x", root),
+			}).Error("Init Dag sync spines: get state failed")
+			continue
+		}
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    s.headSlot(),
+			"root":        fmt.Sprintf("%#x", root),
+		}).Info("Init Dag sync spines: init process")
+		s.processDagSyncSpines(blockState)
+	}
+	return
+}
+
+// processDagSyncSpines implements dag spine synchronization.
+func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
+	ctx, span := trace.StartSpan(s.ctx, "blockChain.processDagFinalization")
+	defer span.End()
+	if s.cfg.ExecutionEngineCaller == nil {
+		return
+	}
+	if blockState == nil {
+		return
+	}
+	if s.IsGwatSynchronizing() {
+		log.WithFields(logrus.Fields{
+			" slot": blockState.Slot(),
+		}).Info("Dag sync spines: skipping by shard sync")
+		return
+	}
+	if s.isSynchronizing() {
+		log.WithFields(logrus.Fields{
+			" slot": blockState.Slot(),
+		}).Info("Dag sync spines: skipping by initial-sync")
+		return
+	}
+	candidates := gwatCommon.HashArrayFromBytes(blockState.SpineData().Spines)
+	if len(candidates) == 0 {
+		return
+	}
+	prefix := gwatCommon.HashArrayFromBytes(blockState.SpineData().Prefix)
+	fulCandidates := append(prefix, candidates...)
+
+	//check candidates exists in optimistic spines
+	cpFinalized := blockState.SpineData().CpFinalized
+	keySpine := gwatCommon.BytesToHash(cpFinalized[len(cpFinalized)-32:])
+	optSpines := s.GetCacheOptimisticSpines(keySpine)
+	flatOptSpines := make(gwatCommon.HashArray, 0, len(optSpines)*8)
+	for _, opts := range optSpines {
+		flatOptSpines = append(flatOptSpines, opts...)
+	}
+	isSync := true
+	for _, cand := range fulCandidates {
+		if !flatOptSpines.Has(cand) {
+			isSync = false
+			break
+		}
+	}
+	if isSync {
+		log.WithFields(logrus.Fields{
+			" slot":         blockState.Slot(),
+			"flatOptSpines": flatOptSpines,
+			"fulCandidates": fulCandidates,
+		}).Info("Dag sync spines: skipping by optimistic spines")
+		return
+	}
+
+	finalizationSeq := helpers.GetFinalizationSequence(blockState)
+	baseSpine := helpers.GetBaseSpine(blockState)
+	syncSeq := make(gwatCommon.HashArray, 0, 1+len(finalizationSeq)+len(prefix))
+	syncSeq = append(syncSeq, baseSpine)
+	syncSeq = append(syncSeq, finalizationSeq...)
+	syncSeq = append(syncSeq, fulCandidates...)
+	syncSeq.Deduplicate()
+
+	log.WithFields(logrus.Fields{
+		" slot":  blockState.Slot(),
+		"spines": syncSeq,
+	}).Info("Dag sync spines: sync params")
+
+	tout := time.Duration((params.BeaconConfig().SecondsPerSlot*1000)/4) * time.Millisecond
+	reqCtx, cancel := context.WithTimeout(ctx, tout)
+	defer cancel()
+	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(reqCtx, syncSeq)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			" slot":  blockState.Slot(),
+			"spines": syncSeq,
+		}).Error("Dag sync spines: execution failed")
+		return
+	}
+
+	return
 }

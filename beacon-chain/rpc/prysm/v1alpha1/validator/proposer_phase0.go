@@ -17,6 +17,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/wrapper"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -105,6 +106,14 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		}).Warn("Proposing skipped (synchronizing)")
 		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
 	}
+	if !vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)),
+			"req.slot":         req.Slot,
+		}).Warn("buildPhase0BlockData skipped: valSyncOp logs processing")
+		return nil, fmt.Errorf("syncing valSyncOps, not ready to respond")
+	}
+
 	//if vs.HeadFetcher.IsGwatSynchronizing() {
 	//	log.WithError(fmt.Errorf("GWAT synchronization process is running, not ready to respond")).WithFields(logrus.Fields{
 	//		"Syncing": vs.HeadFetcher.IsGwatSynchronizing(),

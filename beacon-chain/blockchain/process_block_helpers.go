@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
@@ -445,4 +446,297 @@ func (s *Service) ensureRootNotZeros(root [32]byte) [32]byte {
 		return s.originBlockRoot
 	}
 	return root
+}
+
+// verifyBlkSyncOps validates SyncOps included to block:
+// 1. Validate by op pool: if is valide - break.
+// 2. Validate by parent state: if parentState contains SyncOp - block is invalid.
+// 3. Validate by leaves' states: if any state of leaves contains SyncOp - block is valid.
+func (s *Service) verifyBlkSyncOps(ctx context.Context, block block.BeaconBlock, preState state.BeaconState) error {
+	validate := !s.IsGwatSynchronizing() &&
+		!s.isSynchronizing() &&
+		params.BeaconConfig().IsDelegatingStakeSlot(block.Slot()) &&
+		s.IsValOpPoolValid() &&
+		params.BeaconConfig().IsValOpVerifyForkSlot(block.Slot())
+	if !validate {
+		log.WithFields(logrus.Fields{
+			"slot":                  block.Slot(),
+			"IsGwatSynchronizing":   s.IsGwatSynchronizing(),
+			"isSynchronizing":       s.isSynchronizing(),
+			"IsDelegatingStakeSlot": params.BeaconConfig().IsDelegatingStakeSlot(block.Slot()),
+			"IsValOpPoolValid":      s.IsValOpPoolValid(),
+			"IsValOpVerifyForkSlot": params.BeaconConfig().IsValOpVerifyForkSlot(block.Slot()),
+		}).Info("onBlock: valSyncOp: skip validation")
+		return nil
+	}
+
+	//1. Validate by op pool: if is valide - break.
+	notFoundOpsWth, err := s.verifyWithdrawalsInPool(block)
+	if err != nil {
+		return err
+	}
+	notFoundOpsExit, err := s.verifyExitsInPool(block)
+	if err != nil {
+		return err
+	}
+	if len(notFoundOpsWth) == 0 && len(notFoundOpsExit) == 0 {
+		return nil
+	}
+
+	// 2. Validate by parent state: if parentState contains SyncOp - block is invalid.
+	err = s.checkAnyWithdrawalsInParentState(preState, notFoundOpsWth)
+	if err != nil {
+		return err
+	}
+	err = s.checkAnyExitsInParentState(preState, notFoundOpsExit)
+	if err != nil {
+		return err
+	}
+
+	//3. Validate by leaves' states: if any state of leaves contains SyncOp - block is valid.
+	roots, slots := s.ForkChoicer().Tips()
+	for i, root := range roots {
+		if root == params.BeaconConfig().ZeroHash {
+			continue
+		}
+		// skip parent state
+		if bytes.Equal(root[:], block.ParentRoot()) {
+			continue
+		}
+		//fetch state of leaf
+		st, err := s.cfg.StateGen.StateByRoot(ctx, root)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot": slots[i],
+				"root": fmt.Sprintf("%#x", root),
+			}).Warn("onBlock: valSyncOp: fetch leaf state failed")
+			continue
+		}
+		notFoundOpsWth, err = s.verifyWithdrawalsInLeafState(st, notFoundOpsWth)
+		if err != nil {
+			return err
+		}
+		notFoundOpsExit, err = s.verifyExitsInLeafState(st, notFoundOpsExit)
+		if err != nil {
+			return err
+		}
+		if len(notFoundOpsWth) == 0 && len(notFoundOpsExit) == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("valSyncOp not found in leaves states")
+}
+
+func (s *Service) verifyWithdrawalsInPool(block block.BeaconBlock) (notFoundOps []*ethpb.Withdrawal, err error) {
+	notFoundOps = make([]*ethpb.Withdrawal, 0, len(block.Body().Withdrawals()))
+	if len(block.Body().Withdrawals()) == 0 {
+		return notFoundOps, nil
+	}
+	for i, itm := range block.Body().Withdrawals() {
+		if err = s.cfg.WithdrawalPool.Verify(itm); err != nil {
+			if err.Error() == "not found" {
+				log.WithError(err).WithFields(logrus.Fields{
+					"i":              i,
+					"slot":           block.Slot(),
+					"Amount":         fmt.Sprintf("%d", itm.Amount),
+					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+					"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
+					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+				}).Warn("onBlock: valSyncOp: withdrawal not found")
+				notFoundOps = append(notFoundOps, itm)
+				continue
+			}
+			log.WithError(err).WithFields(logrus.Fields{
+				"i":              i,
+				"slot":           block.Slot(),
+				"Amount":         fmt.Sprintf("%d", itm.Amount),
+				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+				"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
+				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+			}).Error("onBlock: valSyncOp: withdrawal is invalid")
+			return nil, err
+		}
+		log.WithFields(logrus.Fields{
+			"i":              i,
+			"slot":           block.Slot(),
+			"Amount":         fmt.Sprintf("%d", itm.Amount),
+			"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+			"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+			"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
+			"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+		}).Info("onBlock: valSyncOp: withdrawal is valid")
+	}
+	return notFoundOps, nil
+}
+
+func (s *Service) verifyExitsInPool(block block.BeaconBlock) (notFoundOps []*ethpb.VoluntaryExit, err error) {
+	notFoundOps = make([]*ethpb.VoluntaryExit, 0, len(block.Body().VoluntaryExits()))
+	if len(block.Body().VoluntaryExits()) == 0 {
+		return notFoundOps, nil
+	}
+	for i, itm := range block.Body().VoluntaryExits() {
+		if err = s.cfg.ExitPool.Verify(itm); err != nil {
+			if err.Error() == "not found" {
+				log.WithError(err).WithFields(logrus.Fields{
+					"i":              i,
+					"slot":           block.Slot(),
+					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+				}).Warn("onBlock: valSyncOp: exit not found")
+				notFoundOps = append(notFoundOps, itm)
+				continue
+			}
+			log.WithError(err).WithFields(logrus.Fields{
+				"i":              i,
+				"slot":           block.Slot(),
+				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+			}).Error("onBlock: valSyncOp: exit is invalid")
+			return nil, err
+		}
+		log.WithFields(logrus.Fields{
+			"i":              i,
+			"slot":           block.Slot(),
+			"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+			"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+			"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+		}).Info("onBlock: valSyncOp: exit is valid")
+	}
+	return notFoundOps, nil
+}
+
+func (s *Service) checkAnyWithdrawalsInParentState(preState state.BeaconState, ops []*ethpb.Withdrawal) error {
+	if len(ops) == 0 {
+		return nil
+	}
+	valsNr := preState.NumValidators()
+	for _, itm := range ops {
+		if int(itm.ValidatorIndex) >= valsNr {
+			continue
+		}
+		validator, err := preState.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return err
+		}
+		for _, wop := range validator.WithdrawalOps {
+			if bytes.Equal(wop.Hash, itm.InitTxHash) {
+				return fmt.Errorf("valSyncOp exists in parent state op=withdrawal initTx=%#x", itm.InitTxHash)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Service) checkAnyExitsInParentState(preState state.BeaconState, ops []*ethpb.VoluntaryExit) error {
+	if len(ops) == 0 {
+		return nil
+	}
+	valsNr := preState.NumValidators()
+	for _, itm := range ops {
+		if int(itm.ValidatorIndex) >= valsNr {
+			continue
+		}
+		validator, err := preState.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return err
+		}
+		if bytesutil.ToBytes32(validator.ExitHash) != [32]byte{} {
+			return fmt.Errorf("valSyncOp exists in parent state op=exit initTx=%#x", itm.InitTxHash)
+		}
+	}
+	return nil
+}
+
+func (s *Service) verifyWithdrawalsInLeafState(leafSt state.BeaconState, ops []*ethpb.Withdrawal) (notFoundOps []*ethpb.Withdrawal, err error) {
+	notFoundOps = make([]*ethpb.Withdrawal, 0, len(ops))
+	if len(ops) == 0 {
+		return notFoundOps, nil
+	}
+	valsNr := leafSt.NumValidators()
+	for _, itm := range ops {
+		if int(itm.ValidatorIndex) >= valsNr {
+			notFoundOps = append(notFoundOps, itm)
+			continue
+		}
+		isValid := false
+		validator, err := leafSt.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
+		for _, wop := range validator.WithdrawalOps {
+			if bytes.Equal(wop.Hash, itm.InitTxHash) {
+				//validate op data
+				if !bytes.Equal(validator.PublicKey, itm.PublicKey) {
+					log.WithFields(logrus.Fields{
+						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+						"stPublicKey":    fmt.Sprintf("%#x", validator.PublicKey),
+						"opPublicKey":    fmt.Sprintf("%#x", itm.PublicKey),
+						"opAmount":       fmt.Sprintf("%d", itm.Amount),
+						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
+						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
+					}).Error("onBlock: valSyncOp: withdrawal PublicKey mismatch with leaf state")
+					return nil, fmt.Errorf("valSyncOp PublicKey mismatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+				}
+				if wop.Amount != itm.Amount {
+					log.WithFields(logrus.Fields{
+						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+						"stOpAmount":     fmt.Sprintf("%d", wop.Amount),
+						"opAmount":       fmt.Sprintf("%d", itm.Amount),
+						"opPublicKey":    fmt.Sprintf("%#x", itm.PublicKey),
+						"opEpoch":        fmt.Sprintf("%d", itm.Epoch),
+						"opInitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
+					}).Error("onBlock: valSyncOp: withdrawal Amount mismatch with leaf state")
+					return nil, fmt.Errorf("valSyncOp Amount mismatch with leaf state op=withdrawal initTx=%#x", itm.InitTxHash)
+				}
+				log.WithFields(logrus.Fields{
+					"stSlot":         leafSt.Slot(),
+					"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+					"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+					"Amount":         fmt.Sprintf("%d", itm.Amount),
+					"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+					"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
+				}).Info("onBlock: valSyncOp: withdrawal is valid (by leaf state)")
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			notFoundOps = append(notFoundOps, itm)
+		}
+	}
+	return notFoundOps, nil
+}
+
+func (s *Service) verifyExitsInLeafState(leafSt state.BeaconState, ops []*ethpb.VoluntaryExit) (notFoundOps []*ethpb.VoluntaryExit, err error) {
+	notFoundOps = make([]*ethpb.VoluntaryExit, 0, len(ops))
+	if len(ops) == 0 {
+		return notFoundOps, nil
+	}
+	valsNr := leafSt.NumValidators()
+	for _, itm := range ops {
+		if int(itm.ValidatorIndex) >= valsNr {
+			notFoundOps = append(notFoundOps, itm)
+			continue
+		}
+		validator, err := leafSt.ValidatorAtIndex(itm.ValidatorIndex)
+		if err != nil {
+			return nil, err
+		}
+		//validate op data
+		if bytes.Equal(validator.ExitHash, itm.InitTxHash) {
+			log.WithFields(logrus.Fields{
+				"stSlot":         leafSt.Slot(),
+				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
+				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
+				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
+			}).Info("onBlock: valSyncOp: exit is valid (by leaf state)")
+			continue
+		}
+		notFoundOps = append(notFoundOps, itm)
+	}
+	return notFoundOps, nil
 }

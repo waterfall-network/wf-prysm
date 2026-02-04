@@ -1,5 +1,3 @@
-// Package helpers contains helper functions outlined in the Ethereum Beacon Chain spec, such as
-// computing committees, randao, rewards/penalties, and more.
 package helpers
 
 import (
@@ -372,7 +370,8 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState) error {
 	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
 	// Which is the reason why we skip genesis epoch.
-	if time.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+	currEpoch := time.CurrentEpoch(state)
+	if currEpoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead(currEpoch) {
 		return nil
 	}
 

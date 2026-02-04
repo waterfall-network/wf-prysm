@@ -137,6 +137,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", flags.DelegatingStakeForkSlot.Name, 0),
 		fmt.Sprintf("--%s=%d", flags.PrefixFinForkSlot.Name, 0),
 		fmt.Sprintf("--%s=%d", flags.FinEth1ForkSlot.Name, 0),
+		fmt.Sprintf("--%s=%d", flags.ValSyncProcForkSlot.Name, 0),
 		fmt.Sprintf("--%s=%d", flags.MinPeersPerSubnet.Name, 0),
 		fmt.Sprintf("--%s=%d", cmdshared.RPCMaxPageSizeFlag.Name, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
