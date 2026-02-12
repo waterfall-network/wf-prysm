@@ -321,6 +321,11 @@ func (s *Service) StateTracker() {
 						"isBadDepositRoot":      isBadDepositRoot,
 					}).Error("=== LogProcessing: StateTracker: EvtFinalizedCheckpoint: error")
 					continue
+				} else if isBadDepositRoot {
+					isBadDepositRoot = false
+					log.WithFields(logrus.Fields{
+						"isBadDepositRoot": isBadDepositRoot,
+					}).Info("=== LogProcessing: StateTracker: RESET isBadDepositRoot")
 				}
 			}
 		}
