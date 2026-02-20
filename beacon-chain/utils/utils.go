@@ -11,6 +11,12 @@ import (
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 )
 
+// VerifyDepositData validates the format of a deposit's public key and signature,
+// and verifies the structural integrity of the signing root.
+//
+// Note: BLS signature verification (sig.Verify) is intentionally skipped here.
+// Deposit signature is verified during deposit transaction processing on GWAT,
+// so re-verifying it on the coordinator side is not required.
 func VerifyDepositData(dd *ethpb.Deposit_Data, domain []byte) error {
 	if features.Get().SkipBLSVerify {
 		return nil
