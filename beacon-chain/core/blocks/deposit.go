@@ -108,7 +108,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 
 	verified := false
 	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
-		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
+		log.WithError(err).Debug("Ignore deposits signatures verification")
 		verified = true
 	}
 	return verified, nil

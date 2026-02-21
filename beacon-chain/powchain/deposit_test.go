@@ -185,10 +185,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	deposits[0].Proof = proof
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
-	want := "DEPOSIT verify"
-
+	want := "Ignore deposits signatures verification"
 	require.LogsContain(t, hook, want)
-
 }
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
