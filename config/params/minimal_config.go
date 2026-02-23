@@ -41,7 +41,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.CleanWithdrawalsAftEpochs = 100
 	minimalConfig.SqrRootSlotsPerEpoch = 2
-	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.EpochsPerEth1VotingPeriod = 4
 	minimalConfig.SlotsPerHistoricalRoot = 64

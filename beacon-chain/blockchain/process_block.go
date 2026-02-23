@@ -131,79 +131,29 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}(time.Now(), slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 
 	log.WithFields(logrus.Fields{
-		"blSlot":            signed.Block().Slot(),
-		"root":              fmt.Sprintf("%#x", blockRoot),
-		"parentRoot":        fmt.Sprintf("%#x", signed.Block().ParentRoot()),
-		"delegateFork":      params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()),
-		"gwatSynchronizing": s.IsGwatSynchronizing(),
-		"\u2692":            version.BuildId,
+		"blSlot":               signed.Block().Slot(),
+		"root":                 fmt.Sprintf("%#x", blockRoot),
+		"parentRoot":           fmt.Sprintf("%#x", signed.Block().ParentRoot()),
+		"gwatSynchronizing":    s.IsGwatSynchronizing(),
+		"delegateFork":         params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()),
+		"s.isSynchronizing()":  s.isSynchronizing(),
+		"s.IsValOpPoolValid()": s.IsValOpPoolValid(),
+		"\u2692":               version.BuildId,
 	}).Info("onBlock: start")
-
-	if len(signed.Block().Body().Withdrawals()) > 0 {
-		for i, itm := range signed.Block().Body().Withdrawals() {
-			log.WithFields(logrus.Fields{
-				"i":              i,
-				"slot":           signed.Block().Slot(),
-				"Amount":         fmt.Sprintf("%d", itm.Amount),
-				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-				"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
-				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-			}).Info("onBlock: withdrawal")
-
-			if !s.IsGwatSynchronizing() &&
-				!s.isSynchronizing() &&
-				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
-				s.IsValOpPoolValid() {
-				if err := s.cfg.WithdrawalPool.Verify(itm); err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"i":              i,
-						"slot":           signed.Block().Slot(),
-						"Amount":         fmt.Sprintf("%d", itm.Amount),
-						"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-						"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-						"PublicKey":      fmt.Sprintf("%#x", itm.PublicKey),
-						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-					}).Error("onBlock: withdrawal")
-					return err
-				}
-			}
-		}
-	}
-
-	if len(signed.Block().Body().VoluntaryExits()) > 0 {
-		for i, itm := range signed.Block().Body().VoluntaryExits() {
-			log.WithFields(logrus.Fields{
-				"i":              i,
-				"slot":           signed.Block().Slot(),
-				"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-				"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-				"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-			}).Info("onBlock: exit")
-
-			if !s.IsGwatSynchronizing() &&
-				!s.isSynchronizing() &&
-				params.BeaconConfig().IsDelegatingStakeSlot(signed.Block().Slot()) &&
-				s.IsValOpPoolValid() {
-				if err := s.cfg.ExitPool.Verify(itm); err != nil {
-					log.WithError(err).WithFields(logrus.Fields{
-						"i":              i,
-						"slot":           signed.Block().Slot(),
-						"Epoch":          fmt.Sprintf("%d", itm.Epoch),
-						"InitTxHash":     fmt.Sprintf("%#x", itm.InitTxHash),
-						"ValidatorIndex": fmt.Sprintf("%d", itm.ValidatorIndex),
-					}).Error("onBlock: exit")
-					return err
-				}
-			}
-		}
-	}
 
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error")
+		return err
+	}
+
+	err = s.verifyBlkSyncOps(ctx, b, preState)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"block.slot": signed.Block().Slot(),
+		}).Error("onBlock error: invalid sync operation")
 		return err
 	}
 
@@ -382,9 +332,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}).Error("onBlock error could not save head")
 		return errors.Wrap(err, "could not save head")
 	}
-
-	//processDagSyncSpines
-	go s.processDagSyncSpines(postState)
 
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.slot": signed.Block().Slot(),

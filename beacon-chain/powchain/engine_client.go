@@ -66,6 +66,8 @@ type EngineCaller interface {
 	ExecutionDagSyncSpines(ctx context.Context, params gwatCommon.HashArray) (bool, error)
 	GetHeaderByHash(ctx context.Context, hash gwatCommon.Hash) (*gwatTypes.Header, error)
 	GetHeaderByNumber(ctx context.Context, nr *big.Int) (*gwatTypes.Header, error)
+
+	IsTxLogValid() bool
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.

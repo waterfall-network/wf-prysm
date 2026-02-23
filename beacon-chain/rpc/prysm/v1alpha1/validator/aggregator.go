@@ -28,6 +28,13 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+	if !vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)) {
+		log.WithError(fmt.Errorf("syncing valSyncOps, not ready to respond")).WithFields(logrus.Fields{
+			"IsValOpPoolValid": vs.IsValOpPoolValid(slots.ToEpoch(req.Slot)),
+			"req.slot":         req.Slot,
+		}).Warn("SubmitAggregateSelectionProof skipped: valSyncOp logs processing")
+		return nil, fmt.Errorf("syncing valSyncOps, not ready to respond")
+	}
 
 	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
 	if err := vs.optimisticStatus(ctx); err != nil {

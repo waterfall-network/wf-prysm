@@ -37,6 +37,10 @@ func (e *EngineClient) ExecutionDagSyncSlotInfo(ctx context.Context, params *gwa
 	panic("implement me")
 }
 
+func (e *EngineClient) IsTxLogValid() bool {
+	return false
+}
+
 func (e *EngineClient) ExecutionDagGetCandidates(ctx context.Context, slot types.Slot) (gwatCommon.HashArray, error) {
 	panic("implement me")
 }

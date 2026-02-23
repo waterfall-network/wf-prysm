@@ -91,6 +91,7 @@ type ChainInfoFetcher interface {
 	CurrentETH1ConnectionError() error
 	ETH1Endpoints() []string
 	ETH1ConnectionErrors() []error
+	IsTxLogValid() bool
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -320,6 +321,11 @@ func (s *Service) StateTracker() {
 						"isBadDepositRoot":      isBadDepositRoot,
 					}).Error("=== LogProcessing: StateTracker: EvtFinalizedCheckpoint: error")
 					continue
+				} else if isBadDepositRoot {
+					isBadDepositRoot = false
+					log.WithFields(logrus.Fields{
+						"isBadDepositRoot": isBadDepositRoot,
+					}).Info("=== LogProcessing: StateTracker: RESET isBadDepositRoot")
 				}
 			}
 		}
