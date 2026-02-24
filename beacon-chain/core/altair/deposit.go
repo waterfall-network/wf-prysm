@@ -34,8 +34,8 @@ func ProcessDeposits(
 }
 
 // ProcessDeposit processes validator deposit for beacon state Altair.
-func ProcessDeposit(ctx context.Context, beaconState state.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconStateAltair, error) {
-	beaconState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
+func ProcessDeposit(ctx context.Context, beaconState state.BeaconStateAltair, deposit *ethpb.Deposit, verify bool) (state.BeaconStateAltair, error) {
+	beaconState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, verify)
 	if err != nil {
 		return nil, err
 	}

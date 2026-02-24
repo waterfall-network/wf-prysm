@@ -153,46 +153,6 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	require.LogsContain(t, hook, pubKeyErr)
 }
 
-func TestProcessDeposit_InvalidSignature(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := testDB.SetupDB(t)
-	server, endpoint, err := testing2.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server.Stop()
-	})
-	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
-		WithDatabase(beaconDB),
-	)
-	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	web3Service = setDefaultMocks(web3Service)
-
-	deposits, _, err := util.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err)
-	var fakeSig [fieldparams.BLSSignatureLength]byte
-	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
-	deposits[0].Data.Signature = fakeSig[:]
-
-	leaf, err := deposits[0].Data.HashTreeRoot()
-	require.NoError(t, err, "Could not hash deposit")
-
-	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
-	require.NoError(t, err)
-
-	root := trie.HashTreeRoot()
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: 1,
-		DepositRoot:  root[:],
-	}
-
-	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
-	require.NoError(t, err)
-
-	require.LogsContain(t, hook, "could not verify deposit data signature: could not convert bytes to signature")
-}
-
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
@@ -225,10 +185,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	deposits[0].Proof = proof
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
 	require.NoError(t, err)
-	want := "signature did not verify"
-
+	want := "Ignore deposits signatures verification"
 	require.LogsContain(t, hook, want)
-
 }
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {

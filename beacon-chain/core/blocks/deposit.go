@@ -73,6 +73,8 @@ func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposi
 //
 //	For each deposit in block.body.deposits:
 //	  process_deposit(state, deposit)
+//
+// Used for genesis and tests only
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -97,7 +99,6 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-// BatchVerifyDepositsSignatures batch verifies deposit signatures.
 func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposit) (bool, error) {
 	var err error
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -107,7 +108,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 
 	verified := false
 	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
-		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
+		log.WithError(err).Debug("Ignore deposits signatures verification")
 		verified = true
 	}
 	return verified, nil
@@ -155,7 +156,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //	    # Increase balance by deposit amount
 //	    index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //	    increase_balance(state, index, amount)
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verify bool) (state.BeaconState, bool, error) {
 	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
@@ -170,12 +171,12 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		if verifySignature {
+		if verify {
 			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 			if err != nil {
 				return nil, newValidator, err
 			}
-			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
+			if err := verifyDepositData(deposit.Data, domain); err != nil {
 				// Ignore this error as in the spec pseudo code.
 				log.Infof("Skipping deposit: could not verify deposit data signature: %v", err)
 				return beaconState, newValidator, nil
@@ -244,8 +245,8 @@ func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit
 	return nil
 }
 
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error {
-	return utils.VerifyDepositSignature(obj, domain)
+func verifyDepositData(obj *ethpb.Deposit_Data, domain []byte) error {
+	return utils.VerifyDepositData(obj, domain)
 }
 
 func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {

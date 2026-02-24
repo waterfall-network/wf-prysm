@@ -320,7 +320,7 @@ func (vs *Server) validatorStatus(
 			log.Warn("Could not compute domain")
 			return resp, nonExistentIndex
 		}
-		if err := utils.VerifyDepositSignature(dep.Data, domain); err != nil {
+		if err = utils.VerifyDepositData(dep.Data, domain); err != nil {
 			resp.Status = ethpb.ValidatorStatus_INVALID
 			log.WithError(err).Warn("Invalid Eth1 deposit")
 			return resp, nonExistentIndex
