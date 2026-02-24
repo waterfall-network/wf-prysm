@@ -14,8 +14,6 @@
 
 package params
 
-import "math"
-
 // UseTestnet5NetworkConfig uses the Testnet5 specific network config.
 func UseTestnet5NetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
@@ -41,7 +39,7 @@ func Testnet5Config() *BeaconChainConfig {
 	cfg.PrefixFinForkSlot = 0
 	cfg.FinEth1ForkSlot = 0
 	cfg.BlockVotingForkSlot = 0
-	cfg.ValSyncProcForkSlot = math.MaxUint64
+	cfg.ValSyncProcForkSlot = 2048
 	cfg.FcTgTreeForkSlot = 0
 	cfg.ValOpVerifyForkSlot = 0
 	//cfg.SlotsPerArchivedPoint = 2048
