@@ -1,4 +1,4 @@
-//Copyright 2024   Blue Wave Inc.
+//Copyright 2026 Digital Clever Solution Inc.
 //
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -609,12 +609,12 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		}
 		if isActivating {
 			op := &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Activate,
-				ProcEpoch:  uint64(validator.ActivationEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ActivationHash),
+				OpType:          gwatTypes.Activate,
+				ProcEpoch:       uint64(validator.ActivationEpoch),
+				Index:           uint64(idx),
+				Creator:         gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:          nil,
+				InitTxHash:      gwatCommon.BytesToHash(validator.ActivationHash),
 				ActivationEpoch: uint64(validator.ActivationEpoch),
 				ExitEpoch:       uint64(validator.ExitEpoch),
 			}
@@ -635,12 +635,12 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		}
 		if isDeactivating {
 			op := &gwatTypes.ValidatorSync{
-				OpType:     gwatTypes.Deactivate,
-				ProcEpoch:  uint64(validator.ExitEpoch),
-				Index:      uint64(idx),
-				Creator:    gwatCommon.BytesToAddress(validator.CreatorAddress),
-				Amount:     nil,
-				InitTxHash: gwatCommon.BytesToHash(validator.ExitHash),
+				OpType:          gwatTypes.Deactivate,
+				ProcEpoch:       uint64(validator.ExitEpoch),
+				Index:           uint64(idx),
+				Creator:         gwatCommon.BytesToAddress(validator.CreatorAddress),
+				Amount:          nil,
+				InitTxHash:      gwatCommon.BytesToHash(validator.ExitHash),
 				ActivationEpoch: uint64(validator.ActivationEpoch),
 				ExitEpoch:       uint64(validator.ExitEpoch),
 			}
