@@ -98,3 +98,9 @@ func (rc *SpinesData) Copy() *SpinesData {
 		cpFinalized:  rc.CpFinalized(),
 	}
 }
+
+// Roots returns the ordered slice of block roots in this fork (tip first).
+func (f *Fork) Roots() [][32]byte { return f.roots }
+
+// NodeByRoot returns the Node for a given root, or nil if not found.
+func (f *Fork) NodeByRoot(root [32]byte) *Node { return f.nodesMap[root] }

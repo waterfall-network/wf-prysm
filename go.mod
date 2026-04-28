@@ -63,8 +63,8 @@ require (
 	github.com/schollz/progressbar/v3 v3.3.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/status-im/keycard-go v0.2.0
-	github.com/stretchr/testify v1.8.4
-	github.com/supranational/blst v0.3.11
+	github.com/stretchr/testify v1.11.1
+	github.com/supranational/blst v0.3.16
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
 	github.com/trailofbits/go-mutexasserts v0.0.0-20230328101604-8cdbc5f3d279
 	github.com/tyler-smith/go-bip39 v1.1.0
@@ -76,6 +76,8 @@ require (
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gitlab.waterfall.network/waterfall/protocol/gwat v0.10.4
+	gitlab.waterfall.network/waterfall/protocol/wf-consensus v0.0.0-00010101000000-000000000000
+	gitlab.waterfall.network/waterfall/protocol/wf-types v0.0.0-00010101000000-000000000000
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
@@ -139,7 +141,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20240207164012-fb44976bdcd5 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
@@ -270,6 +272,10 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
 replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88
+
+replace gitlab.waterfall.network/waterfall/protocol/wf-types => ../wf-types
+
+replace gitlab.waterfall.network/waterfall/protocol/wf-consensus => ../wf-consensus
 
 //replace gitlab.waterfall.network/waterfall/protocol/gwat => /home/mezin/go/src/gwat
 //replace gitlab.waterfall.network/waterfall/protocol/gwat => /Users/dimarogovij/JOB/Waterfall/gwat
