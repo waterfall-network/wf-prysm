@@ -1,0 +1,93 @@
+// Copyright 2026 Digital Clever Solution Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1;eth";
+
+// Internal coordinator API used by the wf-coordinator sidecar.
+// This service is not exposed to validators or external consumers.
+service CoordinatorInternal {
+    // StreamNewHeads streams a notification for every new canonical head block
+    // set by the beacon node.  wf-coordinator subscribes on startup and uses
+    // the events to drive its dag-finalization loop.
+    rpc StreamNewHeads(google.protobuf.Empty) returns (stream NewHeadEvent);
+
+    // GetFinalizationParams collects the beacon-state-derived parameters that
+    // wf-coordinator needs to call gwat ExecutionDagFinalize.
+    rpc GetFinalizationParams(GetFinalizationParamsRequest) returns (FinalizationParamsResponse);
+
+    // SubmitFinalizationResult sends the outcome of ExecutionDagFinalize back
+    // to the coordinator so it can cache the gwat coordinated checkpoint.
+    rpc SubmitFinalizationResult(SubmitFinalizationResultRequest) returns (google.protobuf.Empty);
+}
+
+// NewHeadEvent is sent on StreamNewHeads whenever the beacon node advances its
+// canonical head to a new block.
+message NewHeadEvent {
+    uint64 slot = 1;
+    bytes  block_root  = 2;  // 32 bytes
+    bytes  state_root  = 3;  // 32 bytes
+}
+
+// GetFinalizationParamsRequest identifies the head block for which the sidecar
+// wants finalization parameters.
+message GetFinalizationParamsRequest {
+    bytes  block_root = 1;  // 32 bytes
+    uint32 sync_mode  = 2;  // gwatTypes.SyncMode cast to uint32
+}
+
+// ValidatorSyncOp is the wire representation of gwatTypes.ValidatorSync.
+message ValidatorSyncOp {
+    uint32 op_type          = 1;
+    uint64 proc_epoch       = 2;
+    uint64 index            = 3;
+    bytes  creator_address  = 4;  // 20 bytes
+    bytes  amount_wei       = 5;  // big.Int bytes, big-endian; empty means nil
+    bytes  init_tx_hash     = 6;  // 32 bytes
+    uint64 activation_epoch = 7;
+    uint64 exit_epoch       = 8;
+    bytes  balance_wei      = 9;  // big.Int bytes, big-endian; empty means nil
+}
+
+// FinalizationCheckpoint is the wire form of gwatTypes.Checkpoint.
+message FinalizationCheckpoint {
+    uint64 fin_epoch = 1;
+    uint64 epoch     = 2;
+    bytes  root      = 3;  // 32 bytes
+    bytes  spine     = 4;  // 32 bytes
+}
+
+// FinalizationParamsResponse carries everything wf-coordinator needs to call
+// gwat ExecutionDagFinalize on behalf of the coordinator.
+message FinalizationParamsResponse {
+    repeated bytes                spines        = 1;  // each 32 bytes
+    bytes                         base_spine    = 2;  // 32 bytes
+    FinalizationCheckpoint        checkpoint    = 3;
+    repeated ValidatorSyncOp      val_sync_data = 4;
+    uint32                        sync_mode     = 5;
+}
+
+// SubmitFinalizationResultRequest carries the outcome of ExecutionDagFinalize.
+// The coordinator uses result_cp_* to determine whether to use the original
+// param_checkpoint or look up a different beacon state for the new checkpoint.
+message SubmitFinalizationResultRequest {
+    bytes                  lf_spine         = 1;  // 32 bytes; empty if nil
+    uint64                 result_cp_epoch  = 2;
+    bytes                  result_cp_root   = 3;  // 32 bytes; empty if nil
+    FinalizationCheckpoint param_checkpoint = 4;  // original checkpoint from params
+}

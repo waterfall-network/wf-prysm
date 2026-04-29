@@ -489,6 +489,17 @@ func (s *Service) processDagFinalization(headState state.BeaconState, syncMode g
 	return nil
 }
 
+// CollectFinalizationParams is the public entry point for the CoordinatorInternal gRPC
+// server to retrieve finalization parameters without calling gwat itself.
+func (s *Service) CollectFinalizationParams(ctx context.Context, headState state.BeaconState, syncMode gwatTypes.SyncMode) (*gwatTypes.FinalizationParams, error) {
+	params, err := s.collectFinalizationParams(ctx, headState)
+	if err != nil {
+		return nil, err
+	}
+	params.SyncMode = syncMode
+	return params, nil
+}
+
 // collectFinalizationParams collects params to call gwat finalization api.
 func (s *Service) collectFinalizationParams(
 	ctx context.Context,

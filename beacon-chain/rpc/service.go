@@ -35,6 +35,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/eth/node"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	coordinternal "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/prysm/v1alpha1/coordinator_internal"
 	debugv1alpha1 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -113,6 +114,7 @@ type Config struct {
 	StateGen                *stategen.State
 	MaxMsgSize              int
 	ExecutionEngineCaller   powchain.EngineCaller
+	DagFinalizationFetcher  coordinternal.DagFinalizationFetcher
 	ProposerIdsCache        *cache.ProposerPayloadIDsCache
 }
 
@@ -346,6 +348,12 @@ func (s *Service) Start() {
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
+	ethpbv1alpha1.RegisterCoordinatorInternalServer(s.grpcServer, &coordinternal.Server{
+		Ctx:           s.ctx,
+		StateNotifier: s.cfg.StateNotifier,
+		StateGen:      s.cfg.StateGen,
+		DagFinalizer:  s.cfg.DagFinalizationFetcher,
+	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
