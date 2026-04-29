@@ -265,10 +265,10 @@ func TestProcessWithdrawal_Ok(t *testing.T) {
 	//check validator
 	gotVal, err := state.ValidatorAtIndexReadOnly(withdrawals[0].ValidatorIndex)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(gotVal.WithdrawalOps()))
-	require.Equal(t, withdrawals[0].Amount, gotVal.WithdrawalOps()[1].Amount)
-	require.DeepEqual(t, withdrawals[0].InitTxHash, gotVal.WithdrawalOps()[1].Hash)
-	require.Equal(t, state.Slot(), gotVal.WithdrawalOps()[1].GetSlot())
+	require.Equal(t, 1, len(gotVal.WithdrawalOps()))
+	require.Equal(t, withdrawals[0].Amount, gotVal.WithdrawalOps()[0].Amount)
+	require.DeepEqual(t, withdrawals[0].InitTxHash, gotVal.WithdrawalOps()[0].Hash)
+	require.Equal(t, state.Slot(), gotVal.WithdrawalOps()[0].GetSlot())
 }
 
 func TestProcessWithdrawal_SkippingAlreadyApplied(t *testing.T) {

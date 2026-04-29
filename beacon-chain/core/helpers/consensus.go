@@ -15,99 +15,46 @@
 package helpers
 
 import (
-	"bytes"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	log "github.com/sirupsen/logrus"
+	coradapter "gitlab.waterfall.network/waterfall/protocol/coordinator/adapter"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
-	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
+	wfhelpers "gitlab.waterfall.network/waterfall/protocol/wf-consensus/helpers"
 )
 
 var ErrBadUnpublishedChains = errors.New("bad unpublished chains")
 
 type mapPublications map[gwatCommon.Hash]int
 
-// ConsensusUpdateStateSpineFinalization update spine data while checkpoints updated.
+// ConsensusUpdateStateSpineFinalization delegates to the Apache-2.0
+// wf-consensus library via the adapter layer.
 func ConsensusUpdateStateSpineFinalization(beaconState state.BeaconState, preJustRoot, preFinRoot []byte) (state.BeaconState, error) {
-	finRoot := beaconState.FinalizedCheckpoint().GetRoot()
-	justRoot := beaconState.CurrentJustifiedCheckpoint().GetRoot()
-
-	if bytes.Equal(justRoot, preJustRoot) {
-		return beaconState, nil
+	if _, err := wfhelpers.ConsensusUpdateStateSpineFinalization(
+		coradapter.WrapState(beaconState),
+		preJustRoot,
+		preFinRoot,
+	); err != nil {
+		return nil, err
 	}
-	cpFinalized := beaconState.SpineData().GetCpFinalized()
-	finalization := beaconState.SpineData().GetFinalization()
-	if bytes.Equal(finRoot, preFinRoot) {
-		cpFinalized = append(cpFinalized, finalization...)
-		finalization = []byte{}
-	} else {
-		cpFinalized = append(cpFinalized[len(cpFinalized)-32:], finalization...)
-		finalization = []byte{}
-	}
-	//update state.SpineData
-	spineData := beaconState.SpineData()
-	spineData.Finalization = finalization
-	spineData.CpFinalized = cpFinalized
-	err := beaconState.SetSpineData(spineData)
-
-	return beaconState, err
+	return beaconState, nil
 }
 
+// ProcessWithdrawalOps delegates to the Apache-2.0 wf-consensus library via
+// the adapter layer.
 func ProcessWithdrawalOps(bState state.BeaconState, preFinRoot []byte) (state.BeaconState, error) {
-	// check activation slot
-	if !params.BeaconConfig().IsDelegatingStakeSlot(bState.Slot()) {
-		return bState, nil
+	cfg := coradapter.ConfigFromParams()
+	if _, err := wfhelpers.ProcessWithdrawalOps(
+		coradapter.WrapState(bState),
+		cfg,
+		preFinRoot,
+	); err != nil {
+		return nil, err
 	}
-	// handle only cp changed
-	finRoot := bState.FinalizedCheckpoint().GetRoot()
-	if bytes.Equal(finRoot, preFinRoot) {
-		return bState, nil
-	}
-	var (
-		minSlot         types.Slot
-		staleAfterSlots = types.Slot(params.BeaconConfig().CleanWithdrawalsAftEpochs) * params.BeaconConfig().SlotsPerEpoch
-	)
-	if bState.Slot() > staleAfterSlots {
-		minSlot = bState.Slot() - staleAfterSlots
-	}
-	err := bState.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
-		var upWops []*ethpb.WithdrawalOp
-		for i, wop := range val.WithdrawalOps {
-			// skip iterate if the first itm > minSlot
-			if i == 0 && wop.Slot > minSlot {
-				break
-			}
-			if wop.Slot <= minSlot {
-				if upWops == nil {
-					upWops = make([]*ethpb.WithdrawalOp, 0, len(val.WithdrawalOps)-1)
-					copy(val.WithdrawalOps[0:i], val.WithdrawalOps[:i])
-				}
-				log.WithFields(log.Fields{
-					"rm":            !(wop.Slot >= minSlot),
-					"bState.Slot":   fmt.Sprintf("%d", bState.Slot()),
-					"w.Slot":        fmt.Sprintf("%d", wop.Slot),
-					"w.Amount":      fmt.Sprintf("%d", wop.Amount),
-					"w.Hash":        fmt.Sprintf("%#x", wop.Hash),
-					"val.Index":     fmt.Sprintf("%d", idx),
-					"val.PublicKey": fmt.Sprintf("%#x", val.PublicKey),
-				}).Info("WithdrawalOps transition: rm stale (epoch proc)")
-			} else if upWops != nil {
-				upWops = append(upWops, wop)
-			}
-		}
-		if upWops != nil {
-			newWop := ethpb.CopyValidator(val)
-			newWop.WithdrawalOps = upWops
-			return true, newWop, nil
-		}
-		return false, val, nil
-	})
-	return bState, err
+	return bState, nil
 }
 
 // CalculateCandidates candidates sequence from optimistic spines for publication in block.

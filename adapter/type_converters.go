@@ -171,10 +171,16 @@ func ValidatorToWF(v *ethpb.Validator) *wftypes.Validator {
 	}
 	return &wftypes.Validator{
 		PublicKey:                  append([]byte(nil), v.PublicKey...),
+		CreatorAddress:             append([]byte(nil), v.CreatorAddress...),
+		WithdrawalCredentials:      append([]byte(nil), v.WithdrawalCredentials...),
+		EffectiveBalance:           v.EffectiveBalance,
+		Slashed:                    v.Slashed,
 		ActivationEligibilityEpoch: wftypes.Epoch(v.ActivationEligibilityEpoch),
 		ActivationEpoch:            wftypes.Epoch(v.ActivationEpoch),
 		ExitEpoch:                  wftypes.Epoch(v.ExitEpoch),
 		WithdrawableEpoch:          wftypes.Epoch(v.WithdrawableEpoch),
+		ActivationHash:             append([]byte(nil), v.ActivationHash...),
+		ExitHash:                   append([]byte(nil), v.ExitHash...),
 		WithdrawalOps:              ops,
 	}
 }
@@ -196,10 +202,16 @@ func ValidatorFromWF(v *wftypes.Validator) *ethpb.Validator {
 	}
 	return &ethpb.Validator{
 		PublicKey:                  append([]byte(nil), v.PublicKey...),
+		CreatorAddress:             append([]byte(nil), v.CreatorAddress...),
+		WithdrawalCredentials:      append([]byte(nil), v.WithdrawalCredentials...),
+		EffectiveBalance:           v.EffectiveBalance,
+		Slashed:                    v.Slashed,
 		ActivationEligibilityEpoch: eth2types.Epoch(v.ActivationEligibilityEpoch),
 		ActivationEpoch:            eth2types.Epoch(v.ActivationEpoch),
 		ExitEpoch:                  eth2types.Epoch(v.ExitEpoch),
 		WithdrawableEpoch:          eth2types.Epoch(v.WithdrawableEpoch),
+		ActivationHash:             append([]byte(nil), v.ActivationHash...),
+		ExitHash:                   append([]byte(nil), v.ExitHash...),
 		WithdrawalOps:              ops,
 	}
 }
