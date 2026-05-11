@@ -367,35 +367,15 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 	return nil
 }
 
-// runProcessDagFinalize This routine processes gwat finalization process.
+// runProcessDagFinalize drains newHeadCh to prevent goroutine leaks.
+// Ongoing dag finalization is handled by the wf-coordinator sidecar via gRPC.
 func (s *Service) runProcessDagFinalize() {
 	go func() {
 		for {
 			select {
 			case <-s.ctx.Done():
-				log.Info("Dag finalization: context done")
 				return
-			case newHead := <-s.newHeadCh:
-				err := s.processDagFinalization(newHead.state, gwatTypes.NoSync)
-				if err != nil {
-					// reset if failed
-					log.WithError(err).WithFields(logrus.Fields{
-						"newHead.root": fmt.Sprintf("%#x", newHead.root),
-						"newHead.slot": newHead.slot,
-					}).Error("Dag finalization: failed start sync sync procedure")
-					s.ResetCachedGwatCoordinatedState()
-					go s.initGwatSync()
-					return
-				}
-
-				log.WithFields(logrus.Fields{
-					"StateRoot": fmt.Sprintf("%#x", newHead.block.Block().StateRoot()),
-					"Slot":      newHead.state.Slot(),
-					"cp.Epoch":  newHead.state.FinalizedCheckpoint().Epoch,
-				}).Info("Dag finalization: success")
-
-				//todo refactor
-				//go s.initDagSyncSpines()
+			case <-s.newHeadCh:
 			}
 		}
 	}()

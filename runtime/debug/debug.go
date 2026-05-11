@@ -37,7 +37,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fjl/memsize/memsizeui"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -45,8 +44,15 @@ import (
 // Handler is the global debugging handler.
 var Handler = new(HandlerT)
 
-// Memsize is the memsizeui Handler(?).
-var Memsize memsizeui.Handler
+// noopMemsizeHandler is a stub replacing fjl/memsize which is incompatible with Go 1.21+.
+type noopMemsizeHandler struct{}
+
+func (*noopMemsizeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	http.NotFound(w, r)
+}
+
+// Memsize is the memsizeui Handler stub (fjl/memsize incompatible with Go 1.21+).
+var Memsize noopMemsizeHandler
 var (
 	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = &cli.BoolFlag{

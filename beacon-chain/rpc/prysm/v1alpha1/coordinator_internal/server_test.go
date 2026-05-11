@@ -134,7 +134,7 @@ func TestStreamNewHeads_SendsEventOnNewHead(t *testing.T) {
 	select {
 	case err := <-errCh:
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "canceled")
+		assert.Contains(t, err.Error(), "Canceled")
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("StreamNewHeads did not return after context cancel")
 	}
