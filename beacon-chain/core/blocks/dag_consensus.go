@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/adapter"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
 	wfdag "gitlab.waterfall.network/waterfall/protocol/wf-consensus/dag"
@@ -42,5 +43,12 @@ func ProcessDagConsensus(ctx context.Context, beaconState state.BeaconState, sig
 	); err != nil {
 		return nil, err
 	}
-	return beaconState, nil
+	// wf-consensus sorts BlockVoting with a SHA256-based key; the canonical
+	// on-chain ordering uses SSZ HashTreeRoot keys (old behavior).
+	// Re-sort here so that replayed blocks produce the same state root.
+	bv, err := helpers.BlockVotingArrStateOrder(beaconState.BlockVoting())
+	if err != nil {
+		return nil, err
+	}
+	return beaconState, beaconState.SetBlockVoting(bv)
 }
