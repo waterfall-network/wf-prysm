@@ -33,3 +33,6 @@ dist
 # deepsource cli
 bin
 /CLAUDE.md
+
+# `go build ./tools/replay-slot/` drops the binary in the module root
+/replay-slot
