@@ -77,7 +77,7 @@ require (
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gitlab.waterfall.network/waterfall/protocol/gwat v0.10.4
 	gitlab.waterfall.network/waterfall/protocol/wf-consensus v0.0.0-00010101000000-000000000000
-	gitlab.waterfall.network/waterfall/protocol/wf-types v0.0.0-00010101000000-000000000000
+	gitlab.waterfall.network/waterfall/protocol/wf-types v0.2.0
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
@@ -273,9 +273,18 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/gr
 
 replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88
 
+// Target state: consume published tag v0.2.0 from origin (require above).
+// Temporarily replaced with local checkout because `go` go-get discovery over
+// HTTPS is currently blocked (private GitLab). Drop this replace in CI / once
+// auth is fixed. ../wf-types is checked out at the v0.2.0 tag (03859bc).
 replace gitlab.waterfall.network/waterfall/protocol/wf-types => ../wf-types
 
 replace gitlab.waterfall.network/waterfall/protocol/wf-consensus => ../wf-consensus
+
+// gwat replaced by license-separated fork wf-go-ethereum (same module path .../gwat).
+// Local path replace is required: the fork's repo URL differs from its module path,
+// so a versioned require/replace cannot resolve it.
+replace gitlab.waterfall.network/waterfall/protocol/gwat => ../wf-go-ethereum
 
 //replace gitlab.waterfall.network/waterfall/protocol/gwat => /home/mezin/go/src/gwat
 //replace gitlab.waterfall.network/waterfall/protocol/gwat => /Users/dimarogovij/JOB/Waterfall/gwat

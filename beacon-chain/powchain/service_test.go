@@ -25,10 +25,10 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
-	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/accounts/abi/bind/backends"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	gethTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
+	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat/interfaces"
 )
 
 var _ ChainStartFetcher = (*Service)(nil)
