@@ -4,22 +4,30 @@ stages:
   - build
   - release
 
+variables:
+  # gwat is the license-separated fork wf-go-ethereum. Its module path (.../gwat)
+  # differs from its repo URL, so it cannot be resolved via the module proxy — CI
+  # clones it next to this repo and go.mod keeps a local `replace` pointing there.
+  # (wf-types, by contrast, resolves normally via its published tag over the proxy.)
+  # Set WF_GOETH_TAG to the wf-go-ethereum release tag (override via a CI/CD variable).
+  WF_GOETH_TAG: "v0.1.0"
+
 .job_build:
   script: &job_build |-
     echo "machine $CI_SERVER_HOST login gitlab-ci-token password $CI_JOB_TOKEN" >> ~/.netrc
     export GOPRIVATE=${CI_SERVER_HOST}
     mkdir -p ./dist
-    bazel version
+    # gwat -> clone the fork (local replace in go.mod points at ../wf-go-ethereum).
+    git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
+    # wf-types -> resolve via its published tag over the authenticated proxy (like the
+    # sibling repos); drop the local dev replace so CI fetches the version from go.mod.
+    go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
     cp runtime/version/version.go /tmp/version.go
     sed -i "s/\\\u2692/${CI_COMMIT_SHORT_SHA}/g" runtime/version/version.go
-    bazel build //beacon-chain:beacon-chain --config=release
-    cp ./bazel-bin/cmd/beacon-chain/beacon-chain_/beacon-chain ./dist/coordinator-beacon
-    bazel build //validator:validator --config=release
-    cp ./bazel-bin/cmd/validator/validator_/validator ./dist/coordinator-validator
-    bazel build //tools/bootnode:bootnode --config=release
-    cp ./bazel-bin/tools/bootnode/bootnode_/bootnode ./dist/coordinator-bootnode
-    bazel build //tools/genesis-state-gen --config=release
-    cp ./bazel-bin/tools/genesis-state-gen/genesis-state-gen_/genesis-state-gen ./dist/coordinator-genesis
+    go build -trimpath -ldflags="-s -w" -o ./dist/coordinator-beacon   ./cmd/beacon-chain
+    go build -trimpath -ldflags="-s -w" -o ./dist/coordinator-validator ./cmd/validator
+    go build -trimpath -ldflags="-s -w" -o ./dist/coordinator-bootnode  ./tools/bootnode
+    go build -trimpath -ldflags="-s -w" -o ./dist/coordinator-genesis   ./tools/genesis-state-gen
     cp -r /tmp/version.go runtime/version/version.go
 
 lint:
@@ -30,6 +38,13 @@ lint:
   rules:
     - if: $CI_COMMIT_TAG == null
       when: on_success
+  before_script:
+    - echo "machine $CI_SERVER_HOST login gitlab-ci-token password $CI_JOB_TOKEN" >> ~/.netrc
+    - export GOPRIVATE=${CI_SERVER_HOST}
+    # golangci-lint must resolve the same deps as the build: clone the gwat fork
+    # (local replace) and let wf-types come from its tag via the authenticated proxy.
+    - git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
+    - go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
   script:
     - echo "SKIP"
     - golangci-lint run -v --out-format=github-actions --config=.golangci.yml --out-format colored-line-number
