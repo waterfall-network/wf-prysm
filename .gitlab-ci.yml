@@ -18,7 +18,8 @@ variables:
     export GOPRIVATE=${CI_SERVER_HOST}
     mkdir -p ./dist
     # gwat -> clone the fork (local replace in go.mod points at ../wf-go-ethereum).
-    git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
+    # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
+    rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
     # wf-types -> resolve via its published tag over the authenticated proxy (like the
     # sibling repos); drop the local dev replace so CI fetches the version from go.mod.
     go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
@@ -43,7 +44,8 @@ lint:
     - export GOPRIVATE=${CI_SERVER_HOST}
     # golangci-lint must resolve the same deps as the build: clone the gwat fork
     # (local replace) and let wf-types come from its tag via the authenticated proxy.
-    - git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
+    # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
+    - rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
     - go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
   script:
     - echo "SKIP"
