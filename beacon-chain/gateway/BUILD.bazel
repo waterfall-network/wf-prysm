@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["helpers.go"],
+    srcs = [
+        "doc.go",
+        "helpers.go",
+    ],
     importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/gateway",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [

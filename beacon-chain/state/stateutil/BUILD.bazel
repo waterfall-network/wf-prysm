@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block_header_root.go",
         "block_voting_root.go",
+        "doc.go",
         "eth1_root.go",
         "field_root_attestation.go",
         "field_root_block_voting.go",

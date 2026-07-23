@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "aggregation.go",
         "caches.go",
+        "doc.go",
         "pool.go",
     ],
     importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/operations/prevote",

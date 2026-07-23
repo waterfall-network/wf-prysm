@@ -6,6 +6,7 @@ go_library(
         "accounts.go",
         "auth_token.go",
         "beacon.go",
+        "doc.go",
         "health.go",
         "intercepter.go",
         "log.go",

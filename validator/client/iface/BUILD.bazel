@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["validator.go"],
+    srcs = [
+        "doc.go",
+        "validator.go",
+    ],
     importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/validator/client/iface",
     visibility = ["//validator:__subpackages__"],
     deps = [
