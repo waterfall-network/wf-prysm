@@ -65,7 +65,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 
 	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
 	// Loosen the check to HasBlock because state summary gets saved in batches
-	// during initial syncing. There's no risk given a state summary object is just a
+	// during initial syncing. There's no risk given a state summary object is just
 	// a subset of the block object.
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, parentRoot) && !s.cfg.BeaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
