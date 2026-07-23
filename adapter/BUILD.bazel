@@ -1,0 +1,27 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "block_adapter.go",
+        "config.go",
+        "forkchoice_adapter.go",
+        "state_adapter.go",
+        "type_converters.go",
+    ],
+    importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/adapter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/forkchoice/protoarray:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//config/params:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@network_waterfall_gitlab_waterfall_protocol_gwat//common:go_default_library",
+        "@network_waterfall_gitlab_waterfall_protocol_wf_consensus//helpers:go_default_library",
+        "@network_waterfall_gitlab_waterfall_protocol_wf_types//common:go_default_library",
+        "@network_waterfall_gitlab_waterfall_protocol_wf_types//coordinator/iface:go_default_library",
+        "@network_waterfall_gitlab_waterfall_protocol_wf_types//coordinator/types:go_default_library",
+    ],
+)

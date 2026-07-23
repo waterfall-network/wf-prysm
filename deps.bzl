@@ -4150,6 +4150,27 @@ def prysm_deps():
         #        remote = "file:///home/mezin/go/src/wf/wf-go-ethereum",
     )
 
+    ## Apache-2.0 libraries used by the adapter layer (beacon-chain/core/helpers ->
+    ## //adapter -> wf-consensus/wf-types). Fetched over git by tag so no module
+    ## proxy checksum is needed, same as the gwat fork above.
+    go_repository(
+        name = "network_waterfall_gitlab_waterfall_protocol_wf_consensus",
+        build_naming_convention = "go_default_library",
+        importpath = "gitlab.waterfall.network/waterfall/protocol/wf-consensus",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-consensus.git",
+        tag = "v0.1.0",
+        vcs = "git",
+    )
+
+    go_repository(
+        name = "network_waterfall_gitlab_waterfall_protocol_wf_types",
+        build_naming_convention = "go_default_library",
+        importpath = "gitlab.waterfall.network/waterfall/protocol/wf-types",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-types.git",
+        tag = "v0.2.0",
+        vcs = "git",
+    )
+
     go_repository(
         name = "org_apache_git_thrift_git",
         importpath = "git.apache.org/thrift.git",
