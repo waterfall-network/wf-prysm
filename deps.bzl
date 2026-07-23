@@ -4135,13 +4135,19 @@ def prysm_deps():
         patches = [
             "//third_party:network_waterfall_gitlab_waterfall_protocol_gwat_secp256k1.patch",
         ],
-        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
-        version = "v0.10.4",
+        ## gwat now comes from the license-separated fork wf-go-ethereum. Its module path
+        ## (.../gwat) differs from its repo URL, so it cannot be fetched from the module
+        ## proxy by `sum`/`version` — pull it over git by tag instead. importpath stays
+        ## .../gwat, so no BUILD file or import needs to change.
+        vcs = "git",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-go-ethereum.git",
+        tag = "v0.1.0",
 
-        ## to use local repo comment `sum` & `version`, and uncomment follows below
-        #        vcs = "git",
-        #        remote = "file:///Users/dimarogovij/JOB/Waterfall/gwat",
-        #        tag = "17-fix-tests",
+        ## previous (pre-license-separation) source, via the module proxy:
+        #        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
+        #        version = "v0.10.4",
+        ## to use a local repo, comment `vcs`/`remote`/`tag` and uncomment:
+        #        remote = "file:///home/mezin/go/src/wf/wf-go-ethereum",
     )
 
     go_repository(
