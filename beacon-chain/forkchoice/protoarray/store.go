@@ -552,7 +552,6 @@ func (s *Store) applyWeightChanges(
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become the best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
-
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -837,9 +836,7 @@ func (f *ForkChoice) Copy() *ForkChoice {
 	var balances []uint64
 	if f.balances != nil {
 		balances = make([]uint64, len(f.balances))
-		for i, v := range f.balances {
-			balances[i] = v
-		}
+		copy(balances, f.balances)
 	}
 
 	return &ForkChoice{

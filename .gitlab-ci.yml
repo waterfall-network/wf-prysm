@@ -23,6 +23,9 @@ variables:
     # wf-types -> resolve via its published tag over the authenticated proxy (like the
     # sibling repos); drop the local dev replace so CI fetches the version from go.mod.
     go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
+    # committed go.sum predates the dep swap; -mod=mod lets go add the missing wf-types
+    # proxy checksum (and any wf-go-ethereum transitive entries) on demand.
+    export GOFLAGS=-mod=mod
     cp runtime/version/version.go /tmp/version.go
     sed -i "s/\\\u2692/${CI_COMMIT_SHORT_SHA}/g" runtime/version/version.go
     go build -trimpath -ldflags="-s -w" -o ./dist/coordinator-beacon   ./cmd/beacon-chain
@@ -47,6 +50,8 @@ lint:
     # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
     - rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
     - go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
+    # committed go.sum predates the dep swap; -mod=mod lets go add the missing checksums.
+    - export GOFLAGS=-mod=mod
   script:
     - echo "SKIP"
     - golangci-lint run -v --out-format=github-actions --config=.golangci.yml --out-format colored-line-number

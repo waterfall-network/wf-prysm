@@ -76,7 +76,7 @@ func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
 	return Data(object.HashTreeRoot, domain)
 }
 
-// Data computes the signing data by utilising the provided root function and then
+// Data computes the signing data by utilizing the provided root function and then
 // returning the signing data of the container object.
 func Data(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
