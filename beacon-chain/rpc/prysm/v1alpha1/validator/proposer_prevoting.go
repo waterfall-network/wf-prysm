@@ -67,7 +67,6 @@ func (vs *Server) getChainsAndVotes(prevote []*ethpb.PreVote, optCandidates gwat
 // defineMostVotedChain defines and returns longest subchain with most of the votes
 func (vs *Server) defineMostVotedChain(chainsMap map[[gwatCommon.HashLength]byte]gwatCommon.HashArray,
 	votesMap map[[gwatCommon.HashLength]byte]uint64) gwatCommon.HashArray {
-
 	// Define most votes number
 	var mostVotes uint64
 	for _, v := range votesMap {

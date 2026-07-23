@@ -41,7 +41,7 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 }
 
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
@@ -65,7 +65,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 }
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState

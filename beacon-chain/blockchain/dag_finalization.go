@@ -195,7 +195,6 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 	}).Info("Gwat sync: sync start")
 
 	for syncSlot <= s.HeadSlot() {
-
 		log.WithFields(logrus.Fields{
 			"syncSlot": syncSlot,
 			"headSlot": s.headSlot(),

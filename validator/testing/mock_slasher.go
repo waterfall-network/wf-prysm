@@ -28,7 +28,6 @@ func (MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAtte
 func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
 	ms.IsSlashableAttestationCalled = true // skipcq: RVV-B0006
 	if ms.SlashAttestation {
-
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
 		if !ok {
 			return nil, errors.New("object is not of type *eth.IndexedAttestation")

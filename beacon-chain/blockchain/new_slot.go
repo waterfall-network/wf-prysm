@@ -68,5 +68,4 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 		}
 	}
 	return nil
-
 }

@@ -169,7 +169,6 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
-
 	}
 	// Return error in the event we have an invalid parent.
 	return err

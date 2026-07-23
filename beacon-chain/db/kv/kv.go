@@ -157,7 +157,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		BufferItems: 64,                    // number of keys per Get buffer.
 	})
 	if err != nil {
-		log.WithField("elapsed", time.Since(start)).Error("Failed to to create validator cache")
+		log.WithField("elapsed", time.Since(start)).Error("Failed to create validator cache")
 		return nil, err
 	}
 	log.WithField("elapsed", time.Since(start)).Info("Created validator cache")

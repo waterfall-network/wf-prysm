@@ -45,7 +45,6 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 
 // ProcessETH1Block processes the logs from the provided eth1Block.
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum uint64) error {
-
 	log.WithFields(logrus.Fields{
 		"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
 		"-startBlk":            blkNum,

@@ -750,7 +750,6 @@ func (s *Store) viableForHead(node *Node) bool {
 // Tips returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
-
 	// Deliberate choice to not preallocate space for below.
 	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
 	headsRoots := make([][32]byte, 0)

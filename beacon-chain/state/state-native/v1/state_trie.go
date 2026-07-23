@@ -213,7 +213,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 			if b.stateFieldLeaves[field].FieldReference() != nil {
 				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
-
 		}
 		for i := 0; i < fieldCount; i++ {
 			field := types.FieldIndex(i)

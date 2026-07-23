@@ -612,7 +612,6 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 // subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node
 // to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
 func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse) error {
-
 	defer func(tstart time.Time, slot types.Slot) {
 		log.WithFields(
 			logrus.Fields{
@@ -726,7 +725,6 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[fieldpar
 			if aggregator {
 				roles = append(roles, iface.RoleAggregator)
 			}
-
 		}
 
 		// Being assigned to a sync committee for a given slot means that the validator produces and
@@ -791,7 +789,6 @@ func (v *validator) RolesAtNextEpoch(ctx context.Context, slot types.Slot) (map[
 			if aggregator {
 				roles = append(roles, iface.RoleAggregator)
 			}
-
 		}
 
 		// Being assigned to a sync committee for a given slot means that the validator produces and
