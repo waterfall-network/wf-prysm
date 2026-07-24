@@ -16,6 +16,11 @@ variables:
 .go_deps: &go_deps |-
   echo "machine $CI_SERVER_HOST login gitlab-ci-token password $CI_JOB_TOKEN" >> ~/.netrc
   export GOPRIVATE=${CI_SERVER_HOST}
+  # The shell runner's system go is 1.19, but go.mod needs 1.21 (log/slog et al.).
+  # Activate Go 1.21 via GVM installed on the runner host, same as wf-go-ethereum.
+  source ~/.gvm/scripts/gvm || echo "Failed to source GVM"
+  gvm use go1.21.12 --default || echo "Failed to use GVM"
+  go version
   # gwat -> clone the fork; the local `replace` in go.mod points at ../wf-go-ethereum.
   # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
   rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
