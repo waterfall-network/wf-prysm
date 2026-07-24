@@ -32,6 +32,13 @@ variables:
   # committed go.sum predates the dep swap; -mod=mod lets go add the missing wf-types
   # proxy checksum (and any wf-go-ethereum transitive entries) on demand.
   export GOFLAGS=-mod=mod
+  # herumi BLS (crypto/bls) links C++ via `-lstdc++`, but the runner has only the
+  # runtime libstdc++.so.6, not the dev symlink `libstdc++.so` (no g++ installed).
+  # Provide the symlink in a writable dir and point the linker at it, no root needed;
+  # linking against .so.6 is fine since it's present at runtime too.
+  CXX6=$(ldconfig -p | awk '/libstdc\+\+\.so\.6/{print $NF; exit}')
+  mkdir -p /tmp/cxxlib && ln -sf "$CXX6" /tmp/cxxlib/libstdc++.so
+  export CGO_LDFLAGS="-L/tmp/cxxlib"
 
 .job_build:
   script: &job_build
