@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/async/abool"
 	testDB "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db/testing"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/stategen"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
@@ -15,7 +16,8 @@ import (
 func TestHeadSlot_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB},
+		cfg:           &config{BeaconDB: beaconDB},
+		isGwatSyncing: abool.New(),
 	}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
@@ -32,8 +34,9 @@ func TestHeadSlot_DataRace(t *testing.T) {
 func TestHeadRoot_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{root: [32]byte{'A'}},
+		cfg:           &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		head:          &head{root: [32]byte{'A'}},
+		isGwatSyncing: abool.New(),
 	}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
@@ -54,8 +57,9 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 	require.NoError(t, err)
 	s := &Service{
-		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{block: wsb},
+		cfg:           &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		head:          &head{block: wsb},
+		isGwatSyncing: abool.New(),
 	}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
@@ -74,7 +78,8 @@ func TestHeadBlock_DataRace(t *testing.T) {
 func TestHeadState_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:           &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		isGwatSyncing: abool.New(),
 	}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
