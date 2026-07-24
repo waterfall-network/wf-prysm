@@ -19,9 +19,11 @@ variables:
   # gwat -> clone the fork; the local `replace` in go.mod points at ../wf-go-ethereum.
   # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
   rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
-  # wf-types -> resolve via its published tag over the authenticated proxy (like the
-  # sibling repos); drop the local dev replace so CI fetches the version from go.mod.
+  # wf-types / wf-consensus -> resolve via their published tags over the authenticated
+  # proxy (like the sibling repos); drop the local dev replaces so CI fetches the
+  # versions pinned in go.mod.
   go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
+  go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-consensus
   # committed go.sum predates the dep swap; -mod=mod lets go add the missing wf-types
   # proxy checksum (and any wf-go-ethereum transitive entries) on demand.
   export GOFLAGS=-mod=mod

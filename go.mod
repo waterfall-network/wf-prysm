@@ -76,7 +76,7 @@ require (
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gitlab.waterfall.network/waterfall/protocol/gwat v0.10.4
-	gitlab.waterfall.network/waterfall/protocol/wf-consensus v0.0.0-00010101000000-000000000000
+	gitlab.waterfall.network/waterfall/protocol/wf-consensus v0.1.0
 	gitlab.waterfall.network/waterfall/protocol/wf-types v0.2.0
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.24.0
@@ -279,6 +279,9 @@ replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-2
 // auth is fixed. ../wf-types is checked out at the v0.2.0 tag (03859bc).
 replace gitlab.waterfall.network/waterfall/protocol/wf-types => ../wf-types
 
+// Target state: consume published tag v0.1.0 from origin (require above).
+// Local replace is for dev only; CI drops it so go fetches v0.1.0 via the proxy.
+// ../wf-consensus is checked out at the v0.1.0 tag (9c2809d).
 replace gitlab.waterfall.network/waterfall/protocol/wf-consensus => ../wf-consensus
 
 // gwat replaced by license-separated fork wf-go-ethereum (same module path .../gwat).
