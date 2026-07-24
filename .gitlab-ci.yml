@@ -35,8 +35,10 @@ variables:
   # herumi BLS (crypto/bls) links C++ via `-lstdc++`, but the runner has only the
   # runtime libstdc++.so.6, not the dev symlink `libstdc++.so` (no g++ installed).
   # Provide the symlink in a writable dir and point the linker at it, no root needed;
-  # linking against .so.6 is fine since it's present at runtime too.
-  CXX6=$(ldconfig -p | awk '/libstdc\+\+\.so\.6/{print $NF; exit}')
+  # linking against .so.6 is fine since it's present at runtime too. Locate the lib
+  # via gcc (the cgo compiler, always on PATH) since ldconfig isn't in the runner's PATH.
+  CXX6=$(gcc -print-file-name=libstdc++.so.6)
+  [ -e "$CXX6" ] || CXX6=$(find /usr/lib /usr/lib64 /lib -name 'libstdc++.so.6' 2>/dev/null | head -n1)
   mkdir -p /tmp/cxxlib && ln -sf "$CXX6" /tmp/cxxlib/libstdc++.so
   export CGO_LDFLAGS="-L/tmp/cxxlib"
 
