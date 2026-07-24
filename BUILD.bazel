@@ -18,6 +18,9 @@ exports_files([
 # gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
 # gazelle:build_tags bazel
 # gazelle:exclude tools/analyzers/**/testdata/**
+# replay-slot is a local debug utility that has never been part of the bazel build;
+# it does not pass the nogo errcheck pass. Keep gazelle from generating a BUILD file.
+# gazelle:exclude tools/replay-slot
 gazelle(
     name = "gazelle",
     prefix = prefix,

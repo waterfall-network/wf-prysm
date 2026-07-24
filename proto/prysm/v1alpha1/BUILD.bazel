@@ -18,6 +18,7 @@ proto_library(
     srcs = [
         "node.proto",
         "beacon_chain.proto",
+        "coordinator_internal.proto",
         "debug.proto",
         "finalized_block_root_container.proto",
         "health.proto",
