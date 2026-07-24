@@ -66,7 +66,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/supranational/blst v0.3.16
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
-	github.com/trailofbits/go-mutexasserts v0.0.0-20230328101604-8cdbc5f3d279
+	github.com/trailofbits/go-mutexasserts v0.0.0-20250514102930-c1f3d2e37561
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/uudashr/gocognit v1.0.5
