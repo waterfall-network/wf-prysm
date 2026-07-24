@@ -14,6 +14,7 @@ import (
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/wrapper"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	history "gitlab.waterfall.network/waterfall/protocol/coordinator/validator/slashing-protection-history"
 )
@@ -59,18 +60,33 @@ type eip3076TestCase struct {
 }
 
 func setupEIP3076SpecTests(t *testing.T) []*eip3076TestCase {
-	testFolders, err := bazel.ListRunfiles()
-	require.NoError(t, err)
-	testCases := make([]*eip3076TestCase, 0)
-	for _, ff := range testFolders {
-		if strings.Contains(ff.ShortPath, "eip3076_spec_tests") &&
-			strings.Contains(ff.ShortPath, "generated/") {
-			enc, err := file.ReadFileAsBytes(ff.Path)
-			require.NoError(t, err)
-			testCase := &eip3076TestCase{}
-			require.NoError(t, json.Unmarshal(enc, testCase))
-			testCases = append(testCases, testCase)
+	var paths []string
+	if files, ok, err := runfile.Walk("eip3076_spec_tests"); ok {
+		// go test path: fixtures extracted under $WF_TESTDATA_DIR/eip3076_spec_tests.
+		require.NoError(t, err)
+		for _, p := range files {
+			if strings.Contains(p, "generated/") {
+				paths = append(paths, p)
+			}
 		}
+	} else {
+		// bazel test path: locate fixtures via runfiles.
+		testFolders, err := bazel.ListRunfiles()
+		require.NoError(t, err)
+		for _, ff := range testFolders {
+			if strings.Contains(ff.ShortPath, "eip3076_spec_tests") &&
+				strings.Contains(ff.ShortPath, "generated/") {
+				paths = append(paths, ff.Path)
+			}
+		}
+	}
+	testCases := make([]*eip3076TestCase, 0)
+	for _, p := range paths {
+		enc, err := file.ReadFileAsBytes(p)
+		require.NoError(t, err)
+		testCase := &eip3076TestCase{}
+		require.NoError(t, json.Unmarshal(enc, testCase))
+		testCases = append(testCases, testCase)
 	}
 	return testCases
 }

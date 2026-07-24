@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/io/file"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 )
 
 func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
-	filepath, err := bazel.Runfile(name)
+	filepath, err := runfile.Path(name)
 	require.NoError(t, err)
 	testFiles, err := ioutil.ReadDir(filepath)
 	require.NoError(t, err)

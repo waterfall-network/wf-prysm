@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/d4l3k/messagediff"
 	"github.com/golang/snappy"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -20,6 +19,7 @@ import (
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/wrapper"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/spectest/utils"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	"google.golang.org/protobuf/proto"
@@ -87,7 +87,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
-			postSSZFilepath, readError := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz_snappy"))
+			postSSZFilepath, readError := runfile.Path(path.Join(testsFolderPath, folder.Name(), "post.ssz_snappy"))
 			postSSZExists := true
 			if readError != nil && strings.Contains(readError.Error(), "could not locate file") {
 				postSSZExists = false

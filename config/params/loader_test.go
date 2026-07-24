@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/io/file"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/assert"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 )
 
 var placeholderFields = []string{"UPDATE_TIMEOUT", "INTERVALS_PER_SLOT"}
@@ -110,7 +110,7 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 
 func TestConfigParityYaml(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	testDir := bazel.TestTmpDir()
+	testDir := t.TempDir()
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2ETestConfig()
@@ -124,7 +124,7 @@ func TestConfigParityYaml(t *testing.T) {
 // configFilePath sets the proper config and returns the relevant
 // config file path from eth2-spec-tests directory.
 func configFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/consensus_spec")
+	filepath, err := runfile.Path("external/consensus_spec")
 	require.NoError(t, err)
 	configFilePath := path.Join(filepath, "configs", config+".yaml")
 	return configFilePath
@@ -134,7 +134,7 @@ func configFilePath(t *testing.T, config string) string {
 // directory. This method returns a preset file path for each hard fork or
 // major network upgrade, in order.
 func presetsFilePath(t *testing.T, config string) []string {
-	filepath, err := bazel.Runfile("external/consensus_spec")
+	filepath, err := runfile.Path("external/consensus_spec")
 	require.NoError(t, err)
 	return []string{
 		path.Join(filepath, "presets", config, "phase0.yaml"),

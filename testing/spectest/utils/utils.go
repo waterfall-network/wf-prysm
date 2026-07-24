@@ -6,10 +6,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	jsoniter "github.com/json-iterator/go"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 )
 
 var json = jsoniter.Config{
@@ -37,7 +37,7 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Fil
 	}
 
 	testsFolderPath := path.Join(config, forkOrPhase, folderPath)
-	filepath, err := bazel.Runfile(testsFolderPath)
+	filepath, err := runfile.Path(testsFolderPath)
 	require.NoError(t, err)
 	testFolders, err := ioutil.ReadDir(filepath)
 	require.NoError(t, err)
