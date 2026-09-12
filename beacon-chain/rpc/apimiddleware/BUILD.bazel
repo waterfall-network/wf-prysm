@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "custom_handlers.go",
         "custom_hooks.go",
+        "doc.go",
         "endpoint_factory.go",
         "structs.go",
         "structs_marshalling.go",

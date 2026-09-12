@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/trailofbits/go-mutexasserts"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/p2p"
 	p2ptypes "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/p2p/types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/cmd/beacon-chain/flags"
@@ -182,6 +183,9 @@ func (l *limiter) free() {
 // not to be used outside the rate limiter file as it is unsafe for concurrent usage
 // and is protected by a lock on all of its usages here.
 func (l *limiter) retrieveCollector(topic string) (*leakybucket.Collector, error) {
+	if !mutexasserts.RWMutexLocked(&l.RWMutex) && !mutexasserts.RWMutexRLocked(&l.RWMutex) {
+		return nil, errors.New("caller must hold read/write lock")
+	}
 	collector, ok := l.limiterMap[topic]
 	if !ok {
 		return nil, errors.Errorf("collector does not exist for topic %s", topic)

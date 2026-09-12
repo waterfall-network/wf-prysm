@@ -58,14 +58,6 @@ func (f *ForkChoice) setNodeVotes(validator uint64, vote Vote, node *int) (maxNo
 	return &index
 }
 
-func (f *ForkChoice) getNodeVotes(nodeRoot [32]byte) map[uint64]Vote {
-	n := f.GetNode(nodeRoot)
-	if n == nil {
-		return nil
-	}
-	return n.AttestationsData().Votes()
-}
-
 // GetParentByOptimisticSpines retrieves node by root.
 func (fc *ForkChoice) GetParentByOptimisticSpines(ctx context.Context, optSpines []gwatCommon.HashArray, jCpRoot [32]byte) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.GetParentByOptimisticSpines")
@@ -137,7 +129,6 @@ func calculateHeadRootByNodesIndexes(
 	rootIndexMap map[[32]byte]uint64,
 	justifiedRoot [32]byte,
 ) ([32]byte, error) {
-
 	indexRootMap := make(map[uint64][32]byte, len(rootIndexMap))
 	for r, index := range rootIndexMap {
 		indexRootMap[index] = r
@@ -237,7 +228,7 @@ func calculateHeadRootByNodesIndexes(
 // Returns
 // 1. T(G) tree nodes as nodeRoot/fcIndex map
 // 2. leafs of acceptable forks as nodeRoot/forkLength
-func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon.HashArray, jCpRoot [32]byte) (map[[32]byte]uint64, map[[32]byte]int) {
+func collectTgTreeNodesByOptimisticSpines(fc *ForkChoice, optSpines []gwatCommon.HashArray, jCpRoot [32]byte) (map[[32]byte]uint64, map[[32]byte]int) { //nolint:gocognit
 	forks := fc.GetForks()
 	rootIndexMap := make(map[[32]byte]uint64)
 	leafs := make(map[[32]byte]int)

@@ -415,7 +415,6 @@ func (s *Service) subscribeDynamicWithSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-
 	log.WithFields(logrus.Fields{
 		"1:topicFormat": topicFormat,
 		"2:digest":      fmt.Sprintf("%#x", digest),

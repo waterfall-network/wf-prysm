@@ -4135,13 +4135,40 @@ def prysm_deps():
         patches = [
             "//third_party:network_waterfall_gitlab_waterfall_protocol_gwat_secp256k1.patch",
         ],
-        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
-        version = "v0.10.4",
+        ## gwat now comes from the license-separated fork wf-go-ethereum. Its module path
+        ## (.../gwat) differs from its repo URL, so it cannot be fetched from the module
+        ## proxy by `sum`/`version` — pull it over git by tag instead. importpath stays
+        ## .../gwat, so no BUILD file or import needs to change.
+        vcs = "git",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-go-ethereum.git",
+        tag = "v0.1.0",
 
-        ## to use local repo comment `sum` & `version`, and uncomment follows below
-        #        vcs = "git",
-        #        remote = "file:///Users/dimarogovij/JOB/Waterfall/gwat",
-        #        tag = "17-fix-tests",
+        ## previous (pre-license-separation) source, via the module proxy:
+        #        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
+        #        version = "v0.10.4",
+        ## to use a local repo, comment `vcs`/`remote`/`tag` and uncomment:
+        #        remote = "file:///home/mezin/go/src/wf/wf-go-ethereum",
+    )
+
+    ## Apache-2.0 libraries used by the adapter layer (beacon-chain/core/helpers ->
+    ## //adapter -> wf-consensus/wf-types). Fetched over git by tag so no module
+    ## proxy checksum is needed, same as the gwat fork above.
+    go_repository(
+        name = "network_waterfall_gitlab_waterfall_protocol_wf_consensus",
+        build_naming_convention = "go_default_library",
+        importpath = "gitlab.waterfall.network/waterfall/protocol/wf-consensus",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-consensus.git",
+        tag = "v0.1.0",
+        vcs = "git",
+    )
+
+    go_repository(
+        name = "network_waterfall_gitlab_waterfall_protocol_wf_types",
+        build_naming_convention = "go_default_library",
+        importpath = "gitlab.waterfall.network/waterfall/protocol/wf-types",
+        remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-types.git",
+        tag = "v0.2.0",
+        vcs = "git",
     )
 
     go_repository(

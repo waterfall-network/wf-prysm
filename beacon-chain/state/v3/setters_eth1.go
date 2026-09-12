@@ -50,7 +50,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 }
 
 // AppendEth1DataVotes for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState

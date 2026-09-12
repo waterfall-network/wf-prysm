@@ -157,7 +157,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 }
 
 // AppendValidator for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -181,7 +181,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 }
 
 // AppendBalance for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

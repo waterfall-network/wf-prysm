@@ -102,7 +102,6 @@ func (vs *Server) GetPrevoteData(ctx context.Context, req *ethpb.PreVoteRequest)
 
 	candidates := gwatCommon.HashArray{}
 	if len(optSpines) > 0 {
-
 		currHead, err := vs.HeadFetcher.HeadState(ctx)
 		if err != nil {
 			log.WithError(err).Error("Collect prevote data:  Could not retrieve head state")

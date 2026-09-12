@@ -552,7 +552,6 @@ func (s *Store) applyWeightChanges(
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become the best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
-
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -751,7 +750,6 @@ func (s *Store) viableForHead(node *Node) bool {
 // Tips returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
-
 	// Deliberate choice to not preallocate space for below.
 	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
 	headsRoots := make([][32]byte, 0)
@@ -837,9 +835,7 @@ func (f *ForkChoice) Copy() *ForkChoice {
 	var balances []uint64
 	if f.balances != nil {
 		balances = make([]uint64, len(f.balances))
-		for i, v := range f.balances {
-			balances[i] = v
-		}
+		copy(balances, f.balances)
 	}
 
 	return &ForkChoice{

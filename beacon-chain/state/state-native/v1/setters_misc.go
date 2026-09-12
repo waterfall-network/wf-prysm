@@ -107,7 +107,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 }
 
 // AppendHistoricalRoots for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

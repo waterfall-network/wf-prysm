@@ -14,8 +14,8 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/assert"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
-	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/common"
+	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat/interfaces"
 )
 
 func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {

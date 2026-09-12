@@ -365,7 +365,6 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		block.Deposits[i] = deposit
 	}
 	for i, exit := range body.VoluntaryExits {
-
 		exit, err := MapVoluntaryExit(exit)
 		if err != nil {
 			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)

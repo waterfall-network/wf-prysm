@@ -72,7 +72,6 @@ func ExecuteStateTransition(
 		return nil, errors.Wrap(err, "could not batch verify signature")
 	}
 	if !valid {
-
 		//TODO RM tmp log ^^^^^^^^^^
 		bSet, err := b.BlockSignatureBatch(state, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot)
 		if err != nil {
@@ -318,7 +317,6 @@ func ProcessSlots(ctx context.Context, st state.BeaconState, slot types.Slot) (s
 						"slot": st.Slot(),
 					}).Warn("Transition: process epoch: set next slot cache failed")
 				}
-
 			} else {
 				log.WithFields(logrus.Fields{
 					"slot": st.Slot(),

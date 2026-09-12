@@ -18,9 +18,9 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
-	gwat "gitlab.waterfall.network/waterfall/protocol/gwat"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	gwatTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
+	gwat "gitlab.waterfall.network/waterfall/protocol/gwat/interfaces"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/rpc"
 	gwatValLog "gitlab.waterfall.network/waterfall/protocol/gwat/validator/txlog"
 )
@@ -45,7 +45,6 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 
 // ProcessETH1Block processes the logs from the provided eth1Block.
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum uint64) error {
-
 	log.WithFields(logrus.Fields{
 		"lastEth.LastReqBlock": s.latestEth1Data.LastRequestedBlock,
 		"-startBlk":            blkNum,

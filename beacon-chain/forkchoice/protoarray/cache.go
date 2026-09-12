@@ -67,7 +67,6 @@ func (c *ForkChoiceCache) Add(fc *ForkChoice) {
 	key, keyData := cacheKeyByRootIndexMap(cpy.store.nodesIndices)
 	_ = c.cache.Add(key, cpy)
 	_ = c.keyCache.Add(key, keyData)
-	return
 }
 
 // Get returns the forkchoice in cache.
@@ -197,20 +196,6 @@ func (c *ForkChoiceCache) searchCompatibleFcKey(binRoots []byte) (key [32]byte, 
 		}
 	}
 	return key, keyRoots
-}
-
-func isValidCachedFc(fc *ForkChoice, rootIndexMap map[[32]byte]uint64) bool {
-	if fc == nil || fc.store == nil || len(fc.store.nodesIndices) == 0 {
-		return false
-	}
-	fc.store.nodesLock.RLock()
-	defer fc.store.nodesLock.RUnlock()
-	for _, n := range fc.store.nodes {
-		if _, ok := rootIndexMap[n.root]; !ok {
-			return false
-		}
-	}
-	return true
 }
 
 // getCompatibleFc searches/create forkchoice inctance compatible with rootIndexMap

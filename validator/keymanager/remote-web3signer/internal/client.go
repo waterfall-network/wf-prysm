@@ -71,7 +71,6 @@ func (client *APIClient) Sign(ctx context.Context, pubKey string, request SignRe
 	}
 
 	return unmarshalSignatureResponse(resp.Body)
-
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).

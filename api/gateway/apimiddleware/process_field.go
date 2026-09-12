@@ -15,7 +15,7 @@ import (
 
 // processField calls each processor function on any field that has the matching tag set.
 // It is a recursive function.
-func processField(s interface{}, processors []fieldProcessor) error {
+func processField(s interface{}, processors []fieldProcessor) error { //nolint:gocognit
 	kind := reflect.TypeOf(s).Kind()
 	if kind != reflect.Ptr && kind != reflect.Slice && kind != reflect.Array {
 		return fmt.Errorf("processing fields of kind '%v' is unsupported", kind)
@@ -49,7 +49,6 @@ func processField(s interface{}, processors []fieldProcessor) error {
 						}
 					}
 				}
-
 			}
 		// Recursively process struct pointers.
 		case reflect.Ptr:

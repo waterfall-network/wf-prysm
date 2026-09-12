@@ -27,7 +27,6 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
-
 	log.Info("UpdateAndSaveHeadWithBalances >>>>> 0")
 
 	cp := s.store.JustifiedCheckpt()
@@ -232,7 +231,6 @@ func (s *Service) setHead(root [32]byte, block block.SignedBeaconBlock, state st
 
 	stRoot, err := state.HashTreeRoot(s.ctx)
 	if err != nil {
-
 	}
 	log.WithError(err).WithFields(logrus.Fields{
 		"block.Slot":   block.Block().Slot(),

@@ -1,3 +1,4 @@
+load("@prysm//tools/go:def.bzl", "go_library")
 load("//tools:target_migration.bzl", "moved_targets")
 
 moved_targets(
@@ -16,4 +17,11 @@ moved_targets(
         ":beacon-chain",
     ],
     "//cmd/beacon-chain",
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["doc.go"],
+    importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain",
+    visibility = ["//visibility:public"],
 )

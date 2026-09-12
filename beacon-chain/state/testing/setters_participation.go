@@ -33,7 +33,6 @@ func VerifyBeaconStateModifyCurrentParticipationField_NestedAction(t *testing.T,
 	st, err := factory()
 	require.NoError(t, err)
 	assert.NoError(t, st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
-
 		length := len(val)
 		mid := length / 2
 
@@ -114,7 +113,6 @@ func VerifyBeaconStateModifyPreviousParticipationField_NestedAction(t *testing.T
 	st, err := factory()
 	require.NoError(t, err)
 	assert.NoError(t, st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
-
 		length := len(val)
 		mid := length / 2
 

@@ -221,7 +221,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -307,7 +306,6 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -370,7 +368,6 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)

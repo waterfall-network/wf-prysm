@@ -1,0 +1,8 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["doc.go"],
+    importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/operations",
+    visibility = ["//visibility:public"],
+)

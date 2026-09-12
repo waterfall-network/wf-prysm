@@ -40,12 +40,12 @@ import (
 	ethpbv1 "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/eth/v1"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	prysmTime "gitlab.waterfall.network/waterfall/protocol/coordinator/time"
-	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/accounts/abi/bind"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/common/hexutil"
 	gwatTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
 	"gitlab.waterfall.network/waterfall/protocol/gwat/ethclient"
+	ethereum "gitlab.waterfall.network/waterfall/protocol/gwat/interfaces"
 	gethRPC "gitlab.waterfall.network/waterfall/protocol/gwat/rpc"
 )
 

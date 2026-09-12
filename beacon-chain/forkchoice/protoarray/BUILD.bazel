@@ -18,6 +18,8 @@ go_library(
     ],
     importpath = "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/forkchoice/protoarray",
     visibility = [
+        # the Apache-2.0 adapter layer bridges forkchoice to wf-consensus
+        "//adapter:__subpackages__",
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
     ],

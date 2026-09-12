@@ -6,6 +6,7 @@ go_library(
         "attestation.go",
         "block.go",
         "deposit.go",
+        "doc.go",
         "epoch_precompute.go",
         "epoch_spec.go",
         "reward.go",

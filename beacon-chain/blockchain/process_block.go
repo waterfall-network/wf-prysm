@@ -518,7 +518,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
@@ -634,7 +633,6 @@ func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.Sig
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.SignedBeaconBlock,
 	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],

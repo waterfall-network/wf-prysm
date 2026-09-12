@@ -170,7 +170,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	if s.cfg.chain.IsBlockRootProcessing(blockRoot) || !s.hasBlockAndState(ctx, blockRoot) {
-
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 

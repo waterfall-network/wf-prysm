@@ -78,8 +78,11 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	}
 
 	if !bytes.Equal(postStateRoot[:], signed.Block().StateRoot()) {
-		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x (slot=%d)",
-			postStateRoot[:], signed.Block().StateRoot(), signed.Block().Slot())
+		// Label the roots by origin: the block's root is the canonical one we
+		// must reproduce, ours is what this node computed. The old wording had
+		// these the other way round and sent debugging down the wrong path.
+		return nil, nil, fmt.Errorf("could not validate state root, block: %#x, computed: %#x (slot=%d)",
+			signed.Block().StateRoot(), postStateRoot[:], signed.Block().Slot())
 	}
 
 	return set, bState, nil

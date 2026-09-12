@@ -35,7 +35,7 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 //	DEPOSITED - validator's deposit has been recognized by shard, not yet recognized by coordinator.
 //	PENDING - validator is in coordinator's activation queue.
 //	ACTIVE - validator is active.
-//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITING - validator has initiated an exit request, or has dropped below the ejection balance and is being kicked out.
 //	EXITED - validator is no longer validating.
 //	SLASHING - validator has been kicked out due to meeting a slashing condition.
 //	UNKNOWN_STATUS - validator does not have a known status in the network.
@@ -267,7 +267,6 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	}
 
 	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
-
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
@@ -336,7 +335,7 @@ func (vs *Server) validatorStatus(
 			if vs.DepositFetcher == nil {
 				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
 			} else {
-				// Check if there was a deposit deposit.
+				// Check if there was a deposit.
 				deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 				if eth1BlockNumBigInt != nil {
 					resp.Status = depositStatus(deposit.Data.Amount)

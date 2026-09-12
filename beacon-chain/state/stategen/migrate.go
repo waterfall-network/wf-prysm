@@ -62,7 +62,6 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-
 				log.WithFields(logrus.Fields{
 					"slot": slot,
 				}).Info("MigrateToCold: no cached state 000")
@@ -92,7 +91,6 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				// There's no need to generate the state if the state already exists on the DB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
-
 					log.WithFields(logrus.Fields{
 						"slot":     slot,
 						"aRoot":    fmt.Sprintf("%#x", aRoot),
