@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"io"
+
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
@@ -42,9 +44,12 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 	if len(rpcCtx) == 0 {
 		return []byte{}, nil
 	}
-	// Read context (fork-digest) from stream
+	// Read context (fork-digest) from stream.
+	// io.ReadFull is required here: a plain stream.Read may return fewer bytes than
+	// requested with a nil error, leaving the tail of the digest zeroed and making a
+	// valid fork-digest look unknown.
 	b := make([]byte, forkDigestLength)
-	if _, err := stream.Read(b); err != nil {
+	if _, err := io.ReadFull(stream, b); err != nil {
 		return nil, err
 	}
 	return b, nil
