@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/io/file"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/assert"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 )
 
 func testnetConfigFilePath(t *testing.T, network string) string {
-	fpath, err := bazel.Runfile("external/eth2_networks")
+	fpath, err := runfile.Path("external/eth2_networks")
 	require.NoError(t, err)
 	configFilePath := path.Join(fpath, "shared", network, "config.yaml")
 	return configFilePath
@@ -21,7 +21,7 @@ func testnetConfigFilePath(t *testing.T, network string) string {
 
 func TestE2EConfigParity(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	testDir := bazel.TestTmpDir()
+	testDir := t.TempDir()
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2EMainnetTestConfig()

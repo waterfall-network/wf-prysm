@@ -7,12 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/blocks"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	stateAltair "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/v2"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/spectest/utils"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	"google.golang.org/protobuf/proto"
@@ -24,6 +25,9 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "operations/block_header/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			// Clear the shuffling/proposer caches so a prior test's global cache
+			// state cannot leak in (the other operation runners do the same).
+			helpers.ClearCache()
 			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
@@ -41,7 +45,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
-			postSSZFilepath, err := bazel.Runfile(path.Join(testsFolderPath, folder.Name(), "post.ssz_snappy"))
+			postSSZFilepath, err := runfile.Path(path.Join(testsFolderPath, folder.Name(), "post.ssz_snappy"))
 			postSSZExists := true
 			if err != nil && strings.Contains(err.Error(), "could not locate file") {
 				postSSZExists = false

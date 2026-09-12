@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
@@ -31,7 +32,12 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
+	// runtime.GC() only queues finalizers; they run asynchronously, so retry a
+	// bounded number of times until b's finalizer has dropped the reference.
+	for i := 0; i < 100 && a.sharedFieldReferences[randaoMixes].Refs() != 1; i++ {
+		runtime.GC()
+		time.Sleep(10 * time.Millisecond)
+	}
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/async/abool"
 	testDB "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db/testing"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/wrapper"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
@@ -20,7 +21,8 @@ func init() {
 func TestChainService_SaveHead_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB},
+		cfg:           &config{BeaconDB: beaconDB},
+		isGwatSyncing: abool.New(),
 	}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	st, _ := util.DeterministicGenesisState(t, 1)

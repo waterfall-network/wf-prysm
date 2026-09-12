@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	stateAltair "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/v2"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -41,7 +41,7 @@ func RunEpochOperationTest(
 	beaconState, err := operationFn(t, preBeaconState)
 	require.NoError(t, err)
 	// If the post.ssz is not present, it means the test should fail on our end.
-	postSSZFilepath, err := bazel.Runfile(path.Join(testFolderPath, "post.ssz_snappy"))
+	postSSZFilepath, err := runfile.Path(path.Join(testFolderPath, "post.ssz_snappy"))
 	postSSZExists := true
 	if err != nil && strings.Contains(err.Error(), "could not locate file") {
 		postSSZExists = false

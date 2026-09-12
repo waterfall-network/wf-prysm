@@ -5,8 +5,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/runfile"
 )
 
 // BazelDirectoryNonEmpty returns true if directory exists and is not empty.
@@ -20,7 +20,7 @@ func BazelDirectoryNonEmpty(filePath string) (bool, error) {
 
 // BazelFileBytes returns the byte array of the bazel file path given.
 func BazelFileBytes(filePaths ...string) ([]byte, error) {
-	filepath, err := bazel.Runfile(path.Join(filePaths...))
+	filepath, err := runfile.Path(path.Join(filePaths...))
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func BazelListDirectories(filepath string) ([]string, error) {
 }
 
 func bazelReadDir(filepath string) ([]os.FileInfo, error) {
-	p, err := bazel.Runfile(filepath)
+	p, err := runfile.Path(filepath)
 	if err != nil {
 		return nil, err
 	}
