@@ -17,11 +17,11 @@ package adapter
 import (
 	"context"
 
+	wfcommon "github.com/LFDT-Iguazu/iguazu-types/common"
+	wfiface "github.com/LFDT-Iguazu/iguazu-types/coordinator/iface"
+	wftypes "github.com/LFDT-Iguazu/iguazu-types/coordinator/types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/forkchoice/protoarray"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
-	wfcommon "gitlab.waterfall.network/waterfall/protocol/wf-types/common"
-	wfiface "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/iface"
-	wftypes "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/types"
 )
 
 var (

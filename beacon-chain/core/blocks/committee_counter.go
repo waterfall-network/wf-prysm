@@ -17,16 +17,16 @@ package blocks
 import (
 	"context"
 
+	wftypes "github.com/LFDT-Iguazu/iguazu-types/coordinator/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	beaconstate "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
-	wftypes "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/types"
 )
 
 // committeeCounterAdapter implements iface.CommitteeCounter using Prysm's
 // shuffling-based committee calculation.  It is used solely by
 // ProcessDagConsensus to provide BlockVotingMinSupport calculations to
-// wf-consensus without introducing a circular import.
+// iguazu-consensus without introducing a circular import.
 type committeeCounterAdapter struct {
 	state beaconstate.BeaconState
 }

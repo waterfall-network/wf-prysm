@@ -15,12 +15,12 @@
 package adapter
 
 import (
+	wfhelpers "github.com/LFDT-Iguazu/iguazu-consensus/helpers"
+	wftypes "github.com/LFDT-Iguazu/iguazu-types/coordinator/types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
-	wfhelpers "gitlab.waterfall.network/waterfall/protocol/wf-consensus/helpers"
-	wftypes "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/types"
 )
 
-// ConfigFromParams builds a wf-consensus helpers.Config from the active Prysm
+// ConfigFromParams builds a iguazu-consensus helpers.Config from the active Prysm
 // beacon-chain and network parameter sets.  Call this at the start of each
 // block/epoch transition so that runtime config overrides (e.g. in tests) are
 // always picked up.

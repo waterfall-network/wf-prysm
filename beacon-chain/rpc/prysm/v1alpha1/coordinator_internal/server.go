@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package coordinator_internal provides the CoordinatorInternal gRPC server
-// used by the wf-coordinator sidecar to interact with the beacon node's
+// used by the iguazu-coordinator sidecar to interact with the beacon node's
 // dag-finalization state without going through the public validator API.
 package coordinator_internal
 
@@ -45,7 +45,7 @@ type DagFinalizationFetcher interface {
 	CacheGwatCoordinatedState(cp *gwatTypes.Checkpoint)
 }
 
-// Server implements eth.CoordinatorInternalServer for the wf-coordinator sidecar.
+// Server implements eth.CoordinatorInternalServer for the iguazu-coordinator sidecar.
 type Server struct {
 	eth.UnimplementedCoordinatorInternalServer
 

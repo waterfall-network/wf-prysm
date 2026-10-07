@@ -341,7 +341,7 @@ func (x *FinalizationCheckpoint) GetSpine() []byte {
 	return nil
 }
 
-// FinalizationParamsResponse carries everything wf-coordinator needs to call
+// FinalizationParamsResponse carries everything iguazu-coordinator needs to call
 // gwat ExecutionDagFinalize on behalf of the coordinator.
 type FinalizationParamsResponse struct {
 	state         protoimpl.MessageState

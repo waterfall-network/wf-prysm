@@ -15,11 +15,11 @@
 package adapter
 
 import (
+	wfiface "github.com/LFDT-Iguazu/iguazu-types/coordinator/iface"
+	wftypes "github.com/LFDT-Iguazu/iguazu-types/coordinator/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	beaconstate "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
-	wfiface "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/iface"
-	wftypes "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/types"
 )
 
 var (

@@ -18,16 +18,16 @@ import (
 	"context"
 	"errors"
 
+	wfdag "github.com/LFDT-Iguazu/iguazu-consensus/dag"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/adapter"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
-	wfdag "gitlab.waterfall.network/waterfall/protocol/wf-consensus/dag"
 )
 
 // ProcessDagConsensus updates the beacon state's DAG-consensus fields
 // (spine data, block voting, eth1 candidates) for the given signed block.
-// It delegates to the Apache-2.0 wf-consensus library via the adapter layer.
+// It delegates to the Apache-2.0 iguazu-consensus library via the adapter layer.
 func ProcessDagConsensus(ctx context.Context, beaconState state.BeaconState, signed block.SignedBeaconBlock) (state.BeaconState, error) {
 	if beaconState == nil || beaconState.IsNil() {
 		return nil, errors.New("nil state")
@@ -43,7 +43,7 @@ func ProcessDagConsensus(ctx context.Context, beaconState state.BeaconState, sig
 	); err != nil {
 		return nil, err
 	}
-	// wf-consensus sorts BlockVoting with a SHA256-based key; the canonical
+	// iguazu-consensus sorts BlockVoting with a SHA256-based key; the canonical
 	// on-chain ordering uses SSZ HashTreeRoot keys (old behavior).
 	// Re-sort here so that replayed blocks produce the same state root.
 	bv, err := helpers.BlockVotingArrStateOrder(beaconState.BlockVoting())

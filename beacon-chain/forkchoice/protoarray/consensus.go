@@ -646,8 +646,8 @@ func (f *ForkChoice) GetCommonAncestor() (node *Node) {
 }
 
 // HeadBySubset selects the LMD-GHOST head among the provided acceptable roots.
-// It is called by wf-consensus after T(G)-tree filtering via
-// GetParentByOptimisticSpines; the T(G) filter runs in wf-consensus and
+// It is called by iguazu-consensus after T(G)-tree filtering via
+// GetParentByOptimisticSpines; the T(G) filter runs in iguazu-consensus and
 // communicates its result back through this interface method.
 func (fc *ForkChoice) HeadBySubset(ctx context.Context, acceptableRoots map[[32]byte]struct{}, jCpRoot [32]byte) ([32]byte, error) {
 	fcCpy := fc.Copy()

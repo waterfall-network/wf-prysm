@@ -367,7 +367,7 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 }
 
 // runProcessDagFinalize drains newHeadCh to prevent goroutine leaks.
-// Ongoing dag finalization is handled by the wf-coordinator sidecar via gRPC.
+// Ongoing dag finalization is handled by the iguazu-coordinator sidecar via gRPC.
 func (s *Service) runProcessDagFinalize() {
 	go func() {
 		for {

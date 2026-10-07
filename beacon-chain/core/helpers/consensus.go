@@ -17,13 +17,13 @@ package helpers
 import (
 	"math/big"
 
+	wfhelpers "github.com/LFDT-Iguazu/iguazu-consensus/helpers"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	coradapter "gitlab.waterfall.network/waterfall/protocol/coordinator/adapter"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
-	wfhelpers "gitlab.waterfall.network/waterfall/protocol/wf-consensus/helpers"
 )
 
 var ErrBadUnpublishedChains = errors.New("bad unpublished chains")
@@ -31,7 +31,7 @@ var ErrBadUnpublishedChains = errors.New("bad unpublished chains")
 type mapPublications map[gwatCommon.Hash]int
 
 // ConsensusUpdateStateSpineFinalization delegates to the Apache-2.0
-// wf-consensus library via the adapter layer.
+// iguazu-consensus library via the adapter layer.
 func ConsensusUpdateStateSpineFinalization(beaconState state.BeaconState, preJustRoot, preFinRoot []byte) (state.BeaconState, error) {
 	if _, err := wfhelpers.ConsensusUpdateStateSpineFinalization(
 		coradapter.WrapState(beaconState),
@@ -43,7 +43,7 @@ func ConsensusUpdateStateSpineFinalization(beaconState state.BeaconState, preJus
 	return beaconState, nil
 }
 
-// ProcessWithdrawalOps delegates to the Apache-2.0 wf-consensus library via
+// ProcessWithdrawalOps delegates to the Apache-2.0 iguazu-consensus library via
 // the adapter layer.
 func ProcessWithdrawalOps(bState state.BeaconState, preFinRoot []byte) (state.BeaconState, error) {
 	cfg := coradapter.ConfigFromParams()

@@ -13,13 +13,13 @@
 // limitations under the License.
 
 // Package adapter bridges Prysm/coordinator types to the Apache 2.0
-// wf-types interfaces consumed by wf-consensus processors.
+// iguazu-types interfaces consumed by iguazu-consensus processors.
 package adapter
 
 import (
+	wftypes "github.com/LFDT-Iguazu/iguazu-types/coordinator/types"
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
-	wftypes "gitlab.waterfall.network/waterfall/protocol/wf-types/coordinator/types"
 )
 
 // ---- SpineData --------------------------------------------------------------
@@ -216,7 +216,7 @@ func ValidatorFromWF(v *wftypes.Validator) *ethpb.Validator {
 	}
 }
 
-// ---- Withdrawal (block operation, coordinator → wf-consensus) ---------------
+// ---- Withdrawal (block operation, coordinator → iguazu-consensus) ---------------
 
 func WithdrawalToWF(w *ethpb.Withdrawal) *wftypes.Withdrawal {
 	if w == nil {

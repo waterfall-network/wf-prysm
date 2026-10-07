@@ -19,6 +19,7 @@ import (
 	"context"
 	"math"
 
+	wfwithdrawal "github.com/LFDT-Iguazu/iguazu-consensus/withdrawal"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/adapter"
@@ -28,7 +29,6 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
-	wfwithdrawal "gitlab.waterfall.network/waterfall/protocol/wf-consensus/withdrawal"
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 	ErrWithdrawalAlreadyApplied    = errors.New("withdrawal already applied")
 )
 
-// ProcessWithdrawal delegates to the Apache-2.0 wf-consensus library via
+// ProcessWithdrawal delegates to the Apache-2.0 iguazu-consensus library via
 // the adapter layer.
 func ProcessWithdrawal(
 	ctx context.Context,

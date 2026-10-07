@@ -19,16 +19,16 @@ import "google/protobuf/empty.proto";
 
 option go_package = "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1;eth";
 
-// Internal coordinator API used by the wf-coordinator sidecar.
+// Internal coordinator API used by the iguazu-coordinator sidecar.
 // This service is not exposed to validators or external consumers.
 service CoordinatorInternal {
     // StreamNewHeads streams a notification for every new canonical head block
-    // set by the beacon node.  wf-coordinator subscribes on startup and uses
+    // set by the beacon node.  iguazu-coordinator subscribes on startup and uses
     // the events to drive its dag-finalization loop.
     rpc StreamNewHeads(google.protobuf.Empty) returns (stream NewHeadEvent);
 
     // GetFinalizationParams collects the beacon-state-derived parameters that
-    // wf-coordinator needs to call gwat ExecutionDagFinalize.
+    // iguazu-coordinator needs to call gwat ExecutionDagFinalize.
     rpc GetFinalizationParams(GetFinalizationParamsRequest) returns (FinalizationParamsResponse);
 
     // SubmitFinalizationResult sends the outcome of ExecutionDagFinalize back
@@ -72,7 +72,7 @@ message FinalizationCheckpoint {
     bytes  spine     = 4;  // 32 bytes
 }
 
-// FinalizationParamsResponse carries everything wf-coordinator needs to call
+// FinalizationParamsResponse carries everything iguazu-coordinator needs to call
 // gwat ExecutionDagFinalize on behalf of the coordinator.
 message FinalizationParamsResponse {
     repeated bytes                spines        = 1;  // each 32 bytes

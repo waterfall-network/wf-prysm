@@ -8,7 +8,7 @@ variables:
   # gwat is the license-separated fork wf-go-ethereum. Its module path (.../gwat)
   # differs from its repo URL, so it cannot be resolved via the module proxy — CI
   # clones it next to this repo and go.mod keeps a local `replace` pointing there.
-  # (wf-types, by contrast, resolves normally via its published tag over the proxy.)
+  # (iguazu-types, by contrast, resolves normally via its published tag over the proxy.)
   # Set WF_GOETH_TAG to the wf-go-ethereum release tag (override via a CI/CD variable).
   WF_GOETH_TAG: "v0.1.0"
 
@@ -24,12 +24,12 @@ variables:
   # gwat -> clone the fork; the local `replace` in go.mod points at ../wf-go-ethereum.
   # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
   rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
-  # wf-types / wf-consensus -> resolve via their published tags over the authenticated
+  # iguazu-types / iguazu-consensus -> resolve via their published tags over the authenticated
   # proxy (like the sibling repos); drop the local dev replaces so CI fetches the
   # versions pinned in go.mod.
-  go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-types
-  go mod edit -dropreplace=gitlab.waterfall.network/waterfall/protocol/wf-consensus
-  # committed go.sum predates the dep swap; -mod=mod lets go add the missing wf-types
+  go mod edit -dropreplace=github.com/LFDT-Iguazu/iguazu-types
+  go mod edit -dropreplace=github.com/LFDT-Iguazu/iguazu-consensus
+  # committed go.sum predates the dep swap; -mod=mod lets go add the missing iguazu-types
   # proxy checksum (and any wf-go-ethereum transitive entries) on demand.
   export GOFLAGS=-mod=mod
   # herumi BLS (crypto/bls) links C++ via `-lstdc++`, but the runner has only the

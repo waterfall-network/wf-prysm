@@ -76,8 +76,8 @@ require (
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gitlab.waterfall.network/waterfall/protocol/gwat v0.10.4
-	gitlab.waterfall.network/waterfall/protocol/wf-consensus v0.1.0
-	gitlab.waterfall.network/waterfall/protocol/wf-types v0.2.0
+	github.com/LFDT-Iguazu/iguazu-consensus v0.1.0
+	github.com/LFDT-Iguazu/iguazu-types v0.2.0
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
@@ -274,15 +274,12 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/gr
 replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88
 
 // Target state: consume published tag v0.2.0 from origin (require above).
-// Temporarily replaced with local checkout because `go` go-get discovery over
-// HTTPS is currently blocked (private GitLab). Drop this replace in CI / once
-// auth is fixed. ../wf-types is checked out at the v0.2.0 tag (03859bc).
-replace gitlab.waterfall.network/waterfall/protocol/wf-types => ../wf-types
+// Local checkout until iguazu-types is published at github.com/LFDT-Iguazu.
+replace github.com/LFDT-Iguazu/iguazu-types => ../iguazu-types
 
 // Target state: consume published tag v0.1.0 from origin (require above).
-// Local replace is for dev only; CI drops it so go fetches v0.1.0 via the proxy.
-// ../wf-consensus is checked out at the v0.1.0 tag (9c2809d).
-replace gitlab.waterfall.network/waterfall/protocol/wf-consensus => ../wf-consensus
+// Local checkout until iguazu-consensus is published at github.com/LFDT-Iguazu.
+replace github.com/LFDT-Iguazu/iguazu-consensus => ../iguazu-consensus
 
 // gwat replaced by license-separated fork wf-go-ethereum (same module path .../gwat).
 // Local path replace is required: the fork's repo URL differs from its module path,
