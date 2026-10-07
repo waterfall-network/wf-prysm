@@ -4141,7 +4141,7 @@ def prysm_deps():
         ## .../gwat, so no BUILD file or import needs to change.
         vcs = "git",
         remote = "https://gitlab.waterfall.network/waterfall/protocol/wf-go-ethereum.git",
-        commit = "0e2da8e2b640dc0aee2bbbc2a8dee213fecd22a6",
+        commit = "4ace13f087518f846e433988e6f0fb8139643446",
 
         ## previous (pre-license-separation) source, via the module proxy:
         #        sum = "h1:5P8iUXPqvzJ0vYYPWE3OCUdTgcwGNOb/gPr5WXQEOGg=",
@@ -4151,25 +4151,21 @@ def prysm_deps():
     )
 
     ## Apache-2.0 libraries used by the adapter layer (beacon-chain/core/helpers ->
-    ## //adapter -> iguazu-consensus/iguazu-types). Fetched over git by commit from the
-    ## iguazu GitLab group until they are published at github.com/LFDT-Iguazu, so no
-    ## module proxy checksum is needed, same as the gwat fork above.
+    ## //adapter -> iguazu-consensus/iguazu-types), published at github.com/LFDT-Iguazu.
     go_repository(
         name = "com_github_lfdt_iguazu_iguazu_consensus",
         build_naming_convention = "go_default_library",
         importpath = "github.com/LFDT-Iguazu/iguazu-consensus",
-        remote = "https://gitlab.waterfall.network/waterfall/protocol/iguazu/iguazu-consensus.git",
-        commit = "d4f084e6233a05430ad7ae74b02270ea117688cc",
-        vcs = "git",
+        sum = "h1:KxQ5IPVVwC8o80qo0uGZqLGRwa1aKu5VxEF9PhUrbHI=",
+        version = "v0.1.0",
     )
 
     go_repository(
         name = "com_github_lfdt_iguazu_iguazu_types",
         build_naming_convention = "go_default_library",
         importpath = "github.com/LFDT-Iguazu/iguazu-types",
-        remote = "https://gitlab.waterfall.network/waterfall/protocol/iguazu/iguazu-types.git",
-        commit = "3f9683174e466439f2dd96fb67c98083d2785984",
-        vcs = "git",
+        sum = "h1:RD1Pq3S4OIqQjMzRih2oH2LwnL+bZ3DdEJ7bUZtfjWo=",
+        version = "v0.1.0",
     )
 
     go_repository(

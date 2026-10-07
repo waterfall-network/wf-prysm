@@ -67,6 +67,10 @@ github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q
 github.com/DataDog/zstd v1.5.2 h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
+github.com/LFDT-Iguazu/iguazu-consensus v0.1.0 h1:KxQ5IPVVwC8o80qo0uGZqLGRwa1aKu5VxEF9PhUrbHI=
+github.com/LFDT-Iguazu/iguazu-consensus v0.1.0/go.mod h1:9o2nNc3+zdxOh/vVOWDqOlqn63uWkTqiAHdpF1xD2wQ=
+github.com/LFDT-Iguazu/iguazu-types v0.1.0 h1:RD1Pq3S4OIqQjMzRih2oH2LwnL+bZ3DdEJ7bUZtfjWo=
+github.com/LFDT-Iguazu/iguazu-types v0.1.0/go.mod h1:IU87cZ9ak2bS1CaipSX8zfJJPPZAMnbc3YEQcP6YktQ=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2 h1:HKOeocqWNWitsHPVPdCUJRalFmDNVHs2xTKmse4svwU=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2/go.mod h1:qYFcGVF7YKFUu5h6mrzKnO+e68utHbeS3a0SlZK0bZQ=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=

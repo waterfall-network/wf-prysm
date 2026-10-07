@@ -24,11 +24,8 @@ variables:
   # gwat -> clone the fork; the local `replace` in go.mod points at ../wf-go-ethereum.
   # rm -rf first: the runner may reuse the build dir across jobs, leaving a stale clone.
   rm -rf ../wf-go-ethereum && git clone --depth 1 --branch "$WF_GOETH_TAG" "https://${CI_SERVER_HOST}/waterfall/protocol/wf-go-ethereum.git" ../wf-go-ethereum
-  # iguazu-types / iguazu-consensus -> not yet published at github.com/LFDT-Iguazu;
-  # clone them next to this repo for the local `replace`s in go.mod (wf-go-ethereum
-  # resolves iguazu-types the same way).
-  rm -rf ../iguazu-types && git clone --depth 1 "https://${CI_SERVER_HOST}/waterfall/protocol/iguazu/iguazu-types.git" ../iguazu-types
-  rm -rf ../iguazu-consensus && git clone --depth 1 "https://${CI_SERVER_HOST}/waterfall/protocol/iguazu/iguazu-consensus.git" ../iguazu-consensus
+  # iguazu-types / iguazu-consensus resolve via their published tags on the public
+  # module proxy (github.com/LFDT-Iguazu).
   # -mod=mod lets go add any missing go.sum entries (e.g. wf-go-ethereum
   # transitive deps) on demand.
   export GOFLAGS=-mod=mod

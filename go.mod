@@ -4,6 +4,8 @@ go 1.21
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
+	github.com/LFDT-Iguazu/iguazu-consensus v0.1.0
+	github.com/LFDT-Iguazu/iguazu-types v0.1.0
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.42.0
@@ -76,8 +78,6 @@ require (
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gitlab.waterfall.network/waterfall/protocol/gwat v0.10.4
-	github.com/LFDT-Iguazu/iguazu-consensus v0.1.0
-	github.com/LFDT-Iguazu/iguazu-types v0.2.0
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
@@ -272,14 +272,6 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
 replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88
-
-// Target state: consume published tag v0.2.0 from origin (require above).
-// Local checkout until iguazu-types is published at github.com/LFDT-Iguazu.
-replace github.com/LFDT-Iguazu/iguazu-types => ../iguazu-types
-
-// Target state: consume published tag v0.1.0 from origin (require above).
-// Local checkout until iguazu-consensus is published at github.com/LFDT-Iguazu.
-replace github.com/LFDT-Iguazu/iguazu-consensus => ../iguazu-consensus
 
 // gwat replaced by license-separated fork wf-go-ethereum (same module path .../gwat).
 // Local path replace is required: the fork's repo URL differs from its module path,
