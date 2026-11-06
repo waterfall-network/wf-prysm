@@ -22,6 +22,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/wrapper"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/runtime/version"
 	prysmTime "gitlab.waterfall.network/waterfall/protocol/coordinator/time"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/validator/client/iface"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -180,8 +181,8 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
-	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+	genesisTime := uint64(genesisResponse.GenesisTime.Seconds)
+	currentEpoch := slots.ToEpoch(slots.SlotByTimestamp(genesisTime, uint64(prysmTime.Now().Unix())))
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
 	exitResp, err := validatorClient.ProposeExit(ctx, exit)

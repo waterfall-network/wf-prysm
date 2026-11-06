@@ -111,6 +111,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 
+	// Must be applied before any slot ticker is created, otherwise the validator
+	// keeps counting slots by the pre-fork duration.
+	cmd.ConfigureForkSlots(cliCtx)
+
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {

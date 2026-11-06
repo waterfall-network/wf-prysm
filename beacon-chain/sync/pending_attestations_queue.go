@@ -19,6 +19,8 @@ import (
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
+// Housekeeping cadence, fixed at process start. It stays on the pre-fork slot duration
+// after UpSecondsPerSlotForkSlot, which only makes it fire less often per slot.
 var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.

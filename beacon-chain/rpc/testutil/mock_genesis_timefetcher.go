@@ -4,7 +4,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 )
 
 // MockGenesisTimeFetcher is a fake implementation of the blockchain.TimeFetcher
@@ -17,5 +17,5 @@ func (m *MockGenesisTimeFetcher) GenesisTime() time.Time {
 }
 
 func (m *MockGenesisTimeFetcher) CurrentSlot() types.Slot {
-	return types.Slot(uint64(time.Now().Unix()-m.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
+	return slots.SinceGenesis(m.Genesis)
 }

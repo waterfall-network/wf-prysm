@@ -6,6 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	prysmTime "gitlab.waterfall.network/waterfall/protocol/coordinator/time"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.
@@ -68,7 +69,11 @@ func (s *Service) pruneExpiredAtts() {
 // Expired is defined as one epoch behind than current time.
 func (s *Service) expired(slot types.Slot) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
-	expirationTime := s.genesisTime + uint64(expirationSlot.Mul(params.BeaconConfig().SecondsPerSlot))
+	expirationTime, err := slots.SlotStartTimestamp(s.genesisTime, expirationSlot)
+	if err != nil {
+		// The expiration slot is in the far distant future, so the attestation is not expired.
+		return false
+	}
 	currentTime := uint64(prysmTime.Now().Unix())
 	return currentTime >= expirationTime
 }

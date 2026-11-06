@@ -311,7 +311,7 @@ func Test_SyncRewards(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			proposerReward, participarntReward, err := altair.SyncRewards(tt.activeBalance)
+			proposerReward, participarntReward, err := altair.SyncRewards(tt.activeBalance, types.Slot(0))
 			if (err != nil) && (tt.errString != "") {
 				require.ErrorContains(t, tt.errString, err)
 				return
@@ -320,4 +320,53 @@ func Test_SyncRewards(t *testing.T) {
 			require.Equal(t, tt.wantParticipantReward, participarntReward)
 		})
 	}
+}
+
+func Test_SyncRewards_UpSecondsPerSlotFork(t *testing.T) {
+	params.UseTestConfig()
+	forkSlot := types.Slot(640)
+
+	cfg := params.BeaconConfig().Copy()
+	// Mirrors the mainnet slot duration fork: 6 seconds per slot before the fork, 3 seconds after.
+	cfg.SecondsPerSlot = 6
+	cfg.UpSecondsPerSlot = 3
+	cfg.UpSecondsPerSlotForkSlot = forkSlot
+	params.OverrideBeaconConfig(cfg)
+
+	activeBalance := params.BeaconConfig().MaxEffectiveBalance * 1e9
+
+	proposerBefore, participantBefore, err := altair.SyncRewards(activeBalance, forkSlot-1)
+	require.NoError(t, err)
+	proposerAt, participantAt, err := altair.SyncRewards(activeBalance, forkSlot)
+	require.NoError(t, err)
+	proposerAfter, participantAfter, err := altair.SyncRewards(activeBalance, forkSlot+1000)
+	require.NoError(t, err)
+
+	require.Equal(t, participantAt, participantAfter)
+	require.Equal(t, proposerAt, proposerAfter)
+
+	// Slots are twice as short since the fork, so the per slot reward is twice as small.
+	require.Equal(t, participantBefore/2, participantAt)
+	require.Equal(t, participantAt*cfg.ProposerWeight/(cfg.WeightDenominator-cfg.ProposerWeight), proposerAt)
+	require.Equal(t, true, proposerAt < proposerBefore)
+}
+
+func Test_SyncRewards_UpSecondsPerSlotForkDisabled(t *testing.T) {
+	params.UseTestConfig()
+
+	cfg := params.BeaconConfig().Copy()
+	cfg.SecondsPerSlot = 6
+	cfg.UpSecondsPerSlot = 0
+	cfg.UpSecondsPerSlotForkSlot = 0
+	params.OverrideBeaconConfig(cfg)
+
+	activeBalance := params.BeaconConfig().MaxEffectiveBalance * 1e9
+
+	proposerFirst, participantFirst, err := altair.SyncRewards(activeBalance, 0)
+	require.NoError(t, err)
+	proposerLast, participantLast, err := altair.SyncRewards(activeBalance, types.Slot(math.MaxUint64-1))
+	require.NoError(t, err)
+
+	require.Equal(t, participantFirst, participantLast)
+	require.Equal(t, proposerFirst, proposerLast)
 }

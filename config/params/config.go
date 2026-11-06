@@ -161,6 +161,10 @@ type BeaconChainConfig struct {
 	ValSyncProcForkSlot types.Slot  `yaml:"VAL_SYNC_PROC_FORK_SLOT" spec:"true"` // ValSyncProcForkSlot defines the slot to start improved validator sync procedure.
 	FcTgTreeForkSlot    types.Slot  `yaml:"FC_TG_TREE_FORK_SLOT" spec:"true"`    // FcTgTreeForkSlot defines the slot to start improved algorithm to build T(G) Tree.
 	ValOpVerifyForkSlot types.Slot  `yaml:"VAL_OP_VERIFY_FORK_SLOT" spec:"true"` // ValOpVerifyForkSlot defines the slot to start fixed verification validator sync op onBlock action.
+	// UpSecondsPerSlotForkSlot defines the first slot which lasts UpSecondsPerSlot seconds instead of SecondsPerSlot.
+	// Zero UpSecondsPerSlot disables the fork, so slot duration stays SecondsPerSlot for the whole chain.
+	UpSecondsPerSlotForkSlot types.Slot `yaml:"UP_SECONDS_PER_SLOT_FORK_SLOT" spec:"true"`
+	UpSecondsPerSlot         uint64     `yaml:"UP_SECONDS_PER_SLOT" spec:"true"` // UpSecondsPerSlot is how many seconds are in a single slot since the UpSecondsPerSlotForkSlot fork.
 	// Deprecated
 	BellatrixForkVersion []byte `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	// Deprecated
@@ -273,6 +277,21 @@ func (b *BeaconChainConfig) IsFcTgTreeForkSlot(slot types.Slot) bool {
 
 func (b *BeaconChainConfig) IsValOpVerifyForkSlot(slot types.Slot) bool {
 	return b.ValOpVerifyForkSlot <= slot
+}
+
+// IsUpSecondsPerSlotForkSlot returns true if the slot duration fork is enabled and the given
+// slot is greater or equal of the fork slot UpSecondsPerSlotForkSlot.
+func (b *BeaconChainConfig) IsUpSecondsPerSlotForkSlot(slot types.Slot) bool {
+	return b.UpSecondsPerSlot > 0 && b.UpSecondsPerSlotForkSlot <= slot
+}
+
+// GetSecondsPerSlot returns the duration of the given slot in seconds:
+// UpSecondsPerSlot since the UpSecondsPerSlotForkSlot fork, SecondsPerSlot otherwise.
+func (b *BeaconChainConfig) GetSecondsPerSlot(slot types.Slot) uint64 {
+	if b.IsUpSecondsPerSlotForkSlot(slot) {
+		return b.UpSecondsPerSlot
+	}
+	return b.SecondsPerSlot
 }
 
 // MinSeedLookahead is the duration of randao look ahead seed.

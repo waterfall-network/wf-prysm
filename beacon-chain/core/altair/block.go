@@ -133,7 +133,7 @@ func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconStateAltair, v
 	if err != nil {
 		return nil, err
 	}
-	proposerReward, participantReward, err := SyncRewards(activeBalance)
+	proposerReward, participantReward, err := SyncRewards(activeBalance, s.Slot())
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,9 @@ func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconStateAltair, v
 }
 
 // SyncRewards returns the proposer reward and the sync participant reward given the total active balance in state.
-func SyncRewards(activeBalance uint64) (proposerReward, participantReward uint64, err error) {
+// Both are scaled by the duration of the given slot, so the annualized emission stays the same
+// on both sides of the UpSecondsPerSlotForkSlot fork.
+func SyncRewards(activeBalance uint64, slot types.Slot) (proposerReward, participantReward uint64, err error) {
 	cfg := params.BeaconConfig()
 	totalActiveIncrements := activeBalance / cfg.EffectiveBalanceIncrement
 	baseRewardPerInc, err := BaseRewardPerIncrement(activeBalance)
@@ -221,6 +223,10 @@ func SyncRewards(activeBalance uint64) (proposerReward, participantReward uint64
 	totalBaseRewards := baseRewardPerInc * totalActiveIncrements
 	maxParticipantRewards := totalBaseRewards * cfg.SyncRewardWeight / cfg.WeightDenominator / uint64(cfg.SlotsPerEpoch)
 	participantReward = maxParticipantRewards / cfg.SyncCommitteeSize
+	// The sync committee reward is paid once per slot and does not depend on time by itself, so
+	// the shorter slots since the UpSecondsPerSlotForkSlot fork would inflate the emission per unit
+	// of time. Scale the reward down by the slot rate to keep it. Before the fork the ratio is 1.
+	participantReward = participantReward * cfg.GetSecondsPerSlot(slot) / cfg.SecondsPerSlot
 	proposerReward = participantReward * cfg.ProposerWeight / (cfg.WeightDenominator - cfg.ProposerWeight)
 	return
 }

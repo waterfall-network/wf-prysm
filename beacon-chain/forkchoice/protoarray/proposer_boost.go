@@ -21,7 +21,7 @@ func (f *ForkChoice) BoostProposerRoot(_ context.Context, args *types.ProposerBo
 	if args == nil {
 		return errors.New("nil function args provided to BoostProposerRoot")
 	}
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	secondsPerSlot := params.BeaconConfig().GetSecondsPerSlot(args.CurrentSlot)
 	isBeforeAttestingInterval := args.SecondsIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
 
 	// Only update the boosted proposer root to the incoming block root

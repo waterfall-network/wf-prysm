@@ -1002,7 +1002,7 @@ func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 		"spines": syncSeq,
 	}).Info("Dag sync spines: sync params")
 
-	tout := time.Duration((params.BeaconConfig().SecondsPerSlot*1000)/4) * time.Millisecond
+	tout := slots.DivideSlotByAt(s.CurrentSlot(), 4 /* a quarter of the slot duration */)
 	reqCtx, cancel := context.WithTimeout(ctx, tout)
 	defer cancel()
 	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(reqCtx, syncSeq)

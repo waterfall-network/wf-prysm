@@ -80,13 +80,15 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	epochTicker := slots.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	slotTicker := slots.NewSlotTicker(vs.TimeFetcher.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case slot := <-epochTicker.C():
-			req.Epoch = types.Epoch(slot)
+		case slot := <-slotTicker.C():
+			if !slots.IsEpochStart(slot) {
+				continue
+			}
+			req.Epoch = slots.ToEpoch(slot)
 			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)

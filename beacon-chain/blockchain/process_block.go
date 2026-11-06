@@ -26,6 +26,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/attestation"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/runtime/version"
+	prysmTime "gitlab.waterfall.network/waterfall/protocol/coordinator/time"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	"go.opencensus.io/trace"
@@ -191,11 +192,20 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
-	secondsIntoSlot := uint64(time.Since(s.genesisTime).Seconds()) % params.BeaconConfig().SecondsPerSlot
+	genesisTimeSec := uint64(s.genesisTime.Unix()) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
+	currentSlot := slots.SinceGenesis(s.genesisTime)
+	// Seconds elapsed since the start of the current slot, whose duration follows the
+	// UpSecondsPerSlotForkSlot fork.
+	var secondsIntoSlot uint64
+	if slotStart, err := slots.SlotStartTimestamp(genesisTimeSec, currentSlot); err == nil {
+		if now := uint64(prysmTime.Now().Unix()); now > slotStart {
+			secondsIntoSlot = now - slotStart
+		}
+	}
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.ProposerBoostRootArgs{
 		BlockRoot:       blockRoot,
 		BlockSlot:       signed.Block().Slot(),
-		CurrentSlot:     slots.SinceGenesis(s.genesisTime),
+		CurrentSlot:     currentSlot,
 		SecondsIntoSlot: secondsIntoSlot,
 	}); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{

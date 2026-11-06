@@ -284,7 +284,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 		return
 	}
 
-	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
+	delay := slots.DivideSlotByAt(slot, 3 /* a third of the slot duration */)
 	startTime := slots.StartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	wait := prysmTime.Until(finalTime)

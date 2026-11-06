@@ -43,6 +43,9 @@ func Testnet9Config() *BeaconChainConfig {
 	cfg.ValSyncProcForkSlot = math.MaxUint64
 	cfg.FcTgTreeForkSlot = 3_018_080
 	cfg.ValOpVerifyForkSlot = 0
+	// must be kept in sync with gwat ForkSlotUpSecondsPerSlot/UpSecondsPerSlot
+	cfg.UpSecondsPerSlotForkSlot = math.MaxUint64
+	cfg.UpSecondsPerSlot = 6
 	//cfg.SlotsPerArchivedPoint = 2048
 
 	cfg.SlotsPerEpoch = 32
