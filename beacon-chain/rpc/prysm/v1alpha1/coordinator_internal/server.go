@@ -55,38 +55,78 @@ type Server struct {
 	DagFinalizer  DagFinalizationFetcher
 }
 
-// StreamNewHeads streams a NewHeadEvent for every canonical head advancement.
+// StreamNewHeads streams a NewHeadEvent when the canonical head advances.
 // The sidecar subscribes once on startup and drives its dag-finalization loop
 // from the events it receives.
+//
+// The state feed blocks its sender until every subscriber takes the event, and
+// block processing is such a sender. stream.Send blocks while the client does not
+// read, so the feed is drained by a separate goroutine that never waits on the
+// client. Only the latest head matters to the sidecar: a newer head replaces a head
+// that is not sent yet.
 func (s *Server) StreamNewHeads(_ *emptypb.Empty, stream eth.CoordinatorInternal_StreamNewHeadsServer) error {
+	ctx, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+
 	stateCh := make(chan *feed.Event, 1)
 	sub := s.StateNotifier.StateFeed().Subscribe(stateCh)
 	defer sub.Unsubscribe()
 
+	heads := make(chan *eth.NewHeadEvent, 1)
+	subErr := make(chan error, 1)
+	go func() {
+		for {
+			select {
+			case event := <-stateCh:
+				head := newHeadEvent(event)
+				if head == nil {
+					continue
+				}
+				// Only this goroutine writes to heads, so the send below never blocks.
+				select {
+				case <-heads:
+				default:
+				}
+				heads <- head
+			case err := <-sub.Err():
+				subErr <- err
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
-		case event := <-stateCh:
-			if event.Type != statefeed.NewHead {
-				continue
-			}
-			head, ok := event.Data.(*ethpbv1.EventHead)
-			if !ok {
-				continue
-			}
-			if err := stream.Send(&eth.NewHeadEvent{
-				Slot:      uint64(head.GetSlot()),
-				BlockRoot: head.GetBlock(),
-				StateRoot: head.GetState(),
-			}); err != nil {
+		case head := <-heads:
+			if err := stream.Send(head); err != nil {
 				return status.Errorf(codes.Unavailable, "StreamNewHeads: send failed: %v", err)
 			}
-		case err := <-sub.Err():
+		case err := <-subErr:
 			return status.Errorf(codes.Aborted, "StreamNewHeads: subscription error: %v", err)
 		case <-s.Ctx.Done():
 			return status.Error(codes.Canceled, "server context canceled")
-		case <-stream.Context().Done():
+		case <-ctx.Done():
 			return status.Error(codes.Canceled, "client disconnected")
 		}
+	}
+}
+
+// newHeadEvent converts a state feed NewHead event to the stream message. It
+// returns nil for other events.
+func newHeadEvent(event *feed.Event) *eth.NewHeadEvent {
+	if event == nil || event.Type != statefeed.NewHead {
+		return nil
+	}
+	head, ok := event.Data.(*ethpbv1.EventHead)
+	if !ok {
+		return nil
+	}
+	return &eth.NewHeadEvent{
+		Slot:      uint64(head.GetSlot()),
+		BlockRoot: head.GetBlock(),
+		StateRoot: head.GetState(),
 	}
 }
 

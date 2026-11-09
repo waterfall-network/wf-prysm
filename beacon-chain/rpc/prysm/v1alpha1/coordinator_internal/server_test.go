@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/async/event"
@@ -173,6 +174,84 @@ func TestStreamNewHeads_IgnoresNonHeadEvents(t *testing.T) {
 
 	<-errCh
 	assert.Empty(t, collector.collected(), "non-head events must not produce output")
+}
+
+// blockingStream blocks every Send until release is closed.
+type blockingStream struct {
+	streamCollector
+	entered chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (s *blockingStream) Send(e *eth.NewHeadEvent) error {
+	s.once.Do(func() { close(s.entered) })
+	<-s.release
+	return s.streamCollector.Send(e)
+}
+
+func sendNewHead(f *event.Feed, slot uint64) {
+	f.Send(&feed.Event{
+		Type: statefeed.NewHead,
+		Data: &ethpbv1.EventHead{Slot: types.Slot(slot), Block: make([]byte, 32), State: make([]byte, 32)},
+	})
+}
+
+func TestStreamNewHeads_SlowClientDoesNotBlockFeed(t *testing.T) {
+	notifier := &fakeStateNotifier{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	srv := &Server{
+		Ctx:           ctx,
+		StateNotifier: notifier,
+		DagFinalizer:  &fakeDagFinalizer{},
+	}
+
+	stream := &blockingStream{
+		streamCollector: streamCollector{ctx: ctx},
+		entered:         make(chan struct{}),
+		release:         make(chan struct{}),
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.StreamNewHeads(&emptypb.Empty{}, stream)
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+
+	// The first head is taken by the stream, which then blocks in Send.
+	sendNewHead(notifier.StateFeed(), 1)
+	select {
+	case <-stream.entered:
+	case <-time.After(time.Second):
+		t.Fatal("stream did not receive the first head")
+	}
+
+	// The feed must not wait for the blocked stream.
+	fed := make(chan struct{})
+	go func() {
+		for slot := uint64(2); slot <= 4; slot++ {
+			sendNewHead(notifier.StateFeed(), slot)
+		}
+		close(fed)
+	}()
+	select {
+	case <-fed:
+	case <-time.After(time.Second):
+		t.Fatal("state feed is blocked by a stream that does not read")
+	}
+
+	// Unsent heads are replaced by the latest one.
+	close(stream.release)
+	require.Eventually(t, func() bool { return len(stream.collected()) == 2 }, time.Second, 5*time.Millisecond)
+	cancel()
+	<-errCh
+
+	got := stream.collected()
+	require.Len(t, got, 2)
+	assert.Equal(t, uint64(1), got[0].GetSlot())
+	assert.Equal(t, uint64(4), got[1].GetSlot())
 }
 
 func TestSubmitFinalizationResult_MatchingCheckpoint(t *testing.T) {
