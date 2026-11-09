@@ -124,8 +124,8 @@ func (s *Service) GetCacheOptimisticSpines(baseSpine gwatCommon.Hash) []gwatComm
 
 // SetValidatedBlockInfo caches info of the latest success validated block.
 func (s *Service) SetValidatedBlockInfo(lastValidRoot []byte, lastValidSlot types.Slot) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.lastValidRoot = lastValidRoot
 	s.spineData.lastValidSlot = lastValidSlot
@@ -141,8 +141,8 @@ func (s *Service) GetValidatedBlockInfo() ([]byte, types.Slot) {
 
 // CacheGwatCheckpoint caches the current gwat checkpoint.
 func (s *Service) CacheGwatCheckpoint(gwatCheckpoint *gwatTypes.Checkpoint) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.gwatCheckpoint = gwatCheckpoint
 }
@@ -161,8 +161,8 @@ func (s *Service) GetCachedGwatCheckpoint(cpRoot []byte) *gwatTypes.Checkpoint {
 
 // CacheGwatCoordinatedState caches the current gwat coordinated state.
 func (s *Service) CacheGwatCoordinatedState(coordState *gwatTypes.Checkpoint) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.coordState = coordState
 }
@@ -177,8 +177,8 @@ func (s *Service) GetCachedGwatCoordinatedState() *gwatTypes.Checkpoint {
 
 // ResetCachedGwatCoordinatedState set the cached gwat coordinated state to nil.
 func (s *Service) ResetCachedGwatCoordinatedState() {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.coordState = nil
 }
