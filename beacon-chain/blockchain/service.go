@@ -87,6 +87,8 @@ type Service struct {
 	fnIsSync              func() bool
 	newHeadCh             chan *head
 	isGwatSyncing         *abool.AtomicBool
+	isGwatSynced          *abool.AtomicBool
+	drainNewHeadsOnce     sync.Once
 	onBlockMu             sync.RWMutex
 }
 
@@ -139,6 +141,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		spineData:            spineData{},
 		newHeadCh:            make(chan *head),
 		isGwatSyncing:        abool.New(),
+		isGwatSynced:         abool.New(),
 		procBlockCache:       procBlockCache,
 		procBlRootCache:      procBlRootCache,
 	}

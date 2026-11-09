@@ -43,6 +43,10 @@ var log = logrus.WithField("prefix", "coordinator-internal")
 type DagFinalizationFetcher interface {
 	CollectFinalizationParams(ctx context.Context, headState state.BeaconState, syncMode gwatTypes.SyncMode) (*gwatTypes.FinalizationParams, error)
 	CacheGwatCoordinatedState(cp *gwatTypes.Checkpoint)
+	// IsGwatSynced reports whether gwat is synchronized and can finalize new heads.
+	IsGwatSynced() bool
+	// ResyncGwat restarts gwat synchronization after a failed head finalization.
+	ResyncGwat()
 }
 
 // Server implements eth.CoordinatorInternalServer for the iguazu-coordinator sidecar.
@@ -136,6 +140,11 @@ func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinaliza
 	if len(req.GetBlockRoot()) != 32 {
 		return nil, status.Error(codes.InvalidArgument, "block_root must be 32 bytes")
 	}
+	// While gwat is synchronized by the beacon node, a head checkpoint may refer to
+	// spines gwat does not have yet. The sidecar retries later.
+	if !s.DagFinalizer.IsGwatSynced() {
+		return nil, status.Error(codes.Unavailable, "gwat synchronization is in progress")
+	}
 	blockRoot := bytesutil.ToBytes32(req.GetBlockRoot())
 	syncMode := gwatTypes.SyncMode(req.GetSyncMode())
 
@@ -160,8 +169,16 @@ func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinaliza
 }
 
 // SubmitFinalizationResult receives the outcome of gwat ExecutionDagFinalize
-// from the sidecar and caches the resulting gwat coordinated checkpoint.
+// from the sidecar and caches the resulting gwat coordinated checkpoint. A
+// reported failure restarts gwat synchronization instead.
 func (s *Server) SubmitFinalizationResult(ctx context.Context, req *eth.SubmitFinalizationResultRequest) (*emptypb.Empty, error) {
+	// A failed head finalization means gwat is behind or diverged: synchronize it again.
+	if req.GetError() != "" {
+		log.WithField("error", req.GetError()).Warn("SubmitFinalizationResult: dag finalization failed, resyncing gwat")
+		s.DagFinalizer.ResyncGwat()
+		return &emptypb.Empty{}, nil
+	}
+
 	paramCp := req.GetParamCheckpoint()
 	if paramCp == nil {
 		return nil, status.Error(codes.InvalidArgument, "param_checkpoint is required")

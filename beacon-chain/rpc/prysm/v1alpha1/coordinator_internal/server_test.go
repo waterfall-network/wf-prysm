@@ -33,6 +33,8 @@ import (
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	gwatTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -55,7 +57,13 @@ func (f *fakeStateNotifier) StateFeed() *event.Feed {
 type fakeDagFinalizer struct {
 	params           *gwatTypes.FinalizationParams
 	cachedCheckpoint *gwatTypes.Checkpoint
+	gwatNotSynced    bool
+	resyncCalls      int
 }
+
+func (f *fakeDagFinalizer) IsGwatSynced() bool { return !f.gwatNotSynced }
+
+func (f *fakeDagFinalizer) ResyncGwat() { f.resyncCalls++ }
 
 func (f *fakeDagFinalizer) CollectFinalizationParams(_ context.Context, _ state.BeaconState, mode gwatTypes.SyncMode) (*gwatTypes.FinalizationParams, error) {
 	if f.params == nil {
@@ -252,6 +260,41 @@ func TestStreamNewHeads_SlowClientDoesNotBlockFeed(t *testing.T) {
 	require.Len(t, got, 2)
 	assert.Equal(t, uint64(1), got[0].GetSlot())
 	assert.Equal(t, uint64(4), got[1].GetSlot())
+}
+
+func TestGetFinalizationParams_GwatNotSynced(t *testing.T) {
+	srv := &Server{
+		Ctx:          context.Background(),
+		DagFinalizer: &fakeDagFinalizer{gwatNotSynced: true},
+	}
+
+	_, err := srv.GetFinalizationParams(context.Background(), &eth.GetFinalizationParamsRequest{
+		BlockRoot: make([]byte, 32),
+	})
+	require.Error(t, err)
+	assert.Equal(t, codes.Unavailable, status.Code(err))
+}
+
+func TestSubmitFinalizationResult_ErrorResyncsGwat(t *testing.T) {
+	finalizer := &fakeDagFinalizer{}
+	srv := &Server{
+		Ctx:          context.Background(),
+		DagFinalizer: finalizer,
+	}
+
+	root := gwatCommon.HexToHash("0xaabb")
+	_, err := srv.SubmitFinalizationResult(context.Background(), &eth.SubmitFinalizationResultRequest{
+		ResultCpEpoch: 7,
+		ResultCpRoot:  root.Bytes(),
+		ParamCheckpoint: &eth.FinalizationCheckpoint{
+			Epoch: 7,
+			Root:  root.Bytes(),
+		},
+		Error: "checkpoint spine not found",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, finalizer.resyncCalls)
+	assert.Nil(t, finalizer.cachedCheckpoint, "a failed result must not be cached")
 }
 
 func TestSubmitFinalizationResult_MatchingCheckpoint(t *testing.T) {
