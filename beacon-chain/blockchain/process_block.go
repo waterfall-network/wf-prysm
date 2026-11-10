@@ -315,7 +315,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	headBlock, err := s.getBlock(ctx, headRoot)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
@@ -647,10 +647,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
-		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		if err := s.flushCachedBlocks(ctx); err != nil {
 			return err
 		}
-		s.clearInitSyncBlocks()
 	}
 
 	justified := s.store.JustifiedCheckpt()
@@ -791,10 +790,13 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}).Info("onBlock: savePostStateInfo 000")
 	tstart := time.Now()
 
-	if initSync {
-		s.saveInitSyncBlock(r, b)
-	} else if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
+	// The block is written to the DB by the background flusher to keep the disk write
+	// out of the head update path. Until then, it's available via getBlock / hasBlockInInitSyncOrDB.
+	s.saveInitSyncBlock(r, b)
+	if !initSync {
+		if err := s.requestBlocksFlush(ctx); err != nil {
+			return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
+		}
 	}
 
 	log.WithFields(logrus.Fields{

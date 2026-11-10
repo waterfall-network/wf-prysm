@@ -97,7 +97,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
 	}
-	if s.cfg.beaconDB.HasBlock(ctx, blockRoot) {
+	if s.cfg.beaconDB.HasBlock(ctx, blockRoot) || s.cfg.chain.HasInitSyncBlock(blockRoot) {
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check if parent is a bad block and then reject the block.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -90,6 +91,12 @@ type Service struct {
 	isGwatSynced          *abool.AtomicBool
 	drainNewHeadsOnce     sync.Once
 	onBlockMu             sync.RWMutex
+	// background flush of the cached blocks and the head root to the DB.
+	flushBlocksCh        chan struct{}
+	flushBlocksMu        sync.Mutex
+	blocksFlusherRunning atomic.Bool
+	pendingHeadRoot      *[32]byte
+	pendingHeadLock      sync.Mutex
 }
 
 // config options for the service.
@@ -140,6 +147,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		store:                &store.Store{},
 		spineData:            spineData{},
 		newHeadCh:            make(chan *head),
+		flushBlocksCh:        make(chan struct{}, 1),
 		isGwatSyncing:        abool.New(),
 		isGwatSynced:         abool.New(),
 		procBlockCache:       procBlockCache,
@@ -165,6 +173,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a blockchain service's main event loop.
 func (s *Service) Start() {
+	s.startBlocksFlusher()
 	saved := s.cfg.FinalizedStateAtStartUp
 
 	if saved != nil && !saved.IsNil() {
@@ -190,8 +199,8 @@ func (s *Service) Stop() error {
 		}
 	}
 
-	// Save initial sync cached blocks to the DB before stop.
-	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
+	// Save cached blocks and head root to the DB before stop.
+	return s.flushCachedBlocksAndHead(s.ctx)
 }
 
 // Status always returns nil unless there is an error condition that causes

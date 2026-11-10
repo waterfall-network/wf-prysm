@@ -98,7 +98,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
-			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
+			// the processed block can be in the chain's blocks cache, not yet written to the DB.
+			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot) || s.cfg.chain.HasInitSyncBlock(blkRoot)
 			// No need to process the same block twice.
 			if inDB {
 				s.pendingQueueLock.Lock()
@@ -134,7 +135,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, parentRoot) || s.cfg.chain.HasInitSyncBlock(parentRoot)
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache

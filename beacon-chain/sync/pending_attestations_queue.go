@@ -63,7 +63,9 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
 		// has the pending attestation's missing block arrived and the node processed block yet?
-		if s.cfg.beaconDB.HasBlock(ctx, bRoot) && (s.cfg.beaconDB.HasState(ctx, bRoot) || s.cfg.beaconDB.HasStateSummary(ctx, bRoot)) {
+		// the processed block can be in the chain's blocks cache, not yet written to the DB.
+		hasBlock := s.cfg.beaconDB.HasBlock(ctx, bRoot) || s.cfg.chain.HasInitSyncBlock(bRoot)
+		if hasBlock && (s.cfg.beaconDB.HasState(ctx, bRoot) || s.cfg.beaconDB.HasStateSummary(ctx, bRoot)) {
 			for _, signedAtt := range attestations {
 				att := signedAtt.Message
 				// The pending attestations can arrive in both aggregated and unaggregated forms,

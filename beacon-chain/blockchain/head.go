@@ -42,7 +42,7 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	headBlock, err := s.getBlock(ctx, headRoot)
 	if err != nil {
 		return err
 	}
@@ -183,8 +183,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock blo
 	// Cache the new head info.
 	s.setHead(headRoot, headBlock, headState)
 
-	// Save the new head root to DB.
-	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+	// Save the new head root to DB by the background flusher (after the head block).
+	s.setPendingHeadRoot(headRoot)
+	if err := s.requestBlocksFlush(ctx); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 
@@ -388,7 +389,7 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) e
 		return nil
 	}
 
-	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	orphanedBlk, err := s.getBlock(ctx, orphanedRoot)
 	if err != nil {
 		return err
 	}

@@ -67,10 +67,3 @@ func (s *Service) getInitSyncBlocks() []block.SignedBeaconBlock {
 	}
 	return blks
 }
-
-// This clears out the initial sync blocks cache.
-func (s *Service) clearInitSyncBlocks() {
-	s.initSyncBlocksLock.Lock()
-	defer s.initSyncBlocksLock.Unlock()
-	s.initSyncBlocks = make(map[[32]byte]block.SignedBeaconBlock)
-}

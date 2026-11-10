@@ -865,7 +865,7 @@ func (s *Service) repairGwatFinalization(
 			break
 		}
 		// retrieve parent block
-		parentBlock, err = s.cfg.BeaconDB.Block(ctx, parentRoot)
+		parentBlock, err = s.getBlock(ctx, parentRoot)
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"parentRoot":   fmt.Sprintf("%#x", parentRoot),

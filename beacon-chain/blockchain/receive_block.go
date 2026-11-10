@@ -144,7 +144,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+	if err := s.flushCachedBlocks(ctx); err != nil {
 		return err
 	}
 	finalized := s.store.FinalizedCheckpt()
@@ -163,7 +163,8 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	return nil
 }
 
-// HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
+// HasInitSyncBlock returns true if the block of the input root exists in the blocks cache
+// (processed block which is not written to the DB yet).
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
 }
