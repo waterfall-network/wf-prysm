@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
 )
 
@@ -131,4 +132,48 @@ func (s *Service) flushPendingHeadRoot(ctx context.Context) error {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 	return nil
+}
+
+// blockRootsBySlot returns the roots of the blocks at the slot from the DB and the blocks cache.
+func (s *Service) blockRootsBySlot(ctx context.Context, slot types.Slot) ([][32]byte, error) {
+	// read the cache first: a block is removed from the cache only after it is written to the DB.
+	s.initSyncBlocksLock.RLock()
+	var cached [][32]byte
+	for r, b := range s.initSyncBlocks {
+		if b.Block().Slot() == slot {
+			cached = append(cached, r)
+		}
+	}
+	s.initSyncBlocksLock.RUnlock()
+
+	_, roots, err := s.cfg.BeaconDB.BlockRootsBySlot(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range cached {
+		has := false
+		for _, dr := range roots {
+			if dr == r {
+				has = true
+				break
+			}
+		}
+		if !has {
+			roots = append(roots, r)
+		}
+	}
+	return roots, nil
+}
+
+// removeCachedBlockAndFromDB removes the block from the blocks cache and the DB.
+// It holds the flush lock, so the flusher can't write the block back to the DB.
+func (s *Service) removeCachedBlockAndFromDB(ctx context.Context, root [32]byte) error {
+	s.flushBlocksMu.Lock()
+	defer s.flushBlocksMu.Unlock()
+
+	s.initSyncBlocksLock.Lock()
+	delete(s.initSyncBlocks, root)
+	s.initSyncBlocksLock.Unlock()
+
+	return s.cfg.BeaconDB.DeleteBlock(ctx, root)
 }

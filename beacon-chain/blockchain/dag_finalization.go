@@ -202,7 +202,7 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 		}).Debug("Gwat sync: 000")
 
 		syncRoot := params.BeaconConfig().ZeroHash
-		_, roots, err := s.cfg.BeaconDB.BlockRootsBySlot(ctx, syncSlot)
+		roots, err := s.blockRootsBySlot(ctx, syncSlot)
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"syncSlot": syncSlot,
@@ -915,7 +915,7 @@ func (s *Service) repairGwatFinalization(
 
 func (s *Service) initDagSyncSpines() {
 	currentSlot := s.CurrentSlot()
-	_, roots, err := s.cfg.BeaconDB.BlockRootsBySlot(s.ctx, currentSlot)
+	roots, err := s.blockRootsBySlot(s.ctx, currentSlot)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"currentSlot": currentSlot,

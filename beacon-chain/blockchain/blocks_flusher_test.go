@@ -152,3 +152,62 @@ func TestService_saveInitSyncBlock_BlockInfoAvailableBeforeFlush(t *testing.T) {
 	require.Equal(t, types.ValidatorIndex(7), proposerIndex)
 	require.Equal(t, types.Slot(5), slot)
 }
+
+func TestService_blockRootsBySlot(t *testing.T) {
+	ctx := context.Background()
+	s := setupBeaconChain(t, testDB.SetupDB(t))
+
+	rDB, bDB := newCachedTestBlock(t, 10)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(ctx, bDB))
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 10
+	b.Block.ProposerIndex = 1
+	rCached, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	s.saveInitSyncBlock(rCached, wb)
+	// a block of another slot in cache.
+	rOther, bOther := newCachedTestBlock(t, 11)
+	s.saveInitSyncBlock(rOther, bOther)
+	// a block in both cache and DB is returned once.
+	s.saveInitSyncBlock(rDB, bDB)
+
+	roots, err := s.blockRootsBySlot(ctx, 10)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(roots))
+	require.Equal(t, true, roots[0] == rDB || roots[1] == rDB)
+	require.Equal(t, true, roots[0] == rCached || roots[1] == rCached)
+}
+
+func TestService_removeCachedBlockAndFromDB(t *testing.T) {
+	ctx := context.Background()
+	s := setupBeaconChain(t, testDB.SetupDB(t))
+
+	rCached, bCached := newCachedTestBlock(t, 12)
+	s.saveInitSyncBlock(rCached, bCached)
+	rDB, bDB := newCachedTestBlock(t, 13)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(ctx, bDB))
+
+	require.NoError(t, s.removeCachedBlockAndFromDB(ctx, rCached))
+	require.NoError(t, s.removeCachedBlockAndFromDB(ctx, rDB))
+	// the removed block is not written back by flush.
+	require.NoError(t, s.flushCachedBlocks(ctx))
+
+	require.Equal(t, false, s.hasBlockInInitSyncOrDB(ctx, rCached))
+	require.Equal(t, false, s.hasBlockInInitSyncOrDB(ctx, rDB))
+}
+
+func TestService_CachedBlock(t *testing.T) {
+	ctx := context.Background()
+	s := setupBeaconChain(t, testDB.SetupDB(t))
+
+	r, b := newCachedTestBlock(t, 14)
+	require.Equal(t, true, s.CachedBlock(r) == nil)
+	s.saveInitSyncBlock(r, b)
+	require.DeepEqual(t, b, s.CachedBlock(r))
+
+	require.NoError(t, s.FlushCachedBlocks(ctx))
+	require.Equal(t, true, s.CachedBlock(r) == nil)
+	require.Equal(t, true, s.cfg.BeaconDB.HasBlock(ctx, r))
+}

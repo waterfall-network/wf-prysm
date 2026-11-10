@@ -406,6 +406,16 @@ func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) 
 	return true, nil
 }
 
+// CachedBlock mocks the same method in the chain service.
+func (_ *ChainService) CachedBlock(_ [32]byte) block.SignedBeaconBlock {
+	return nil
+}
+
+// FlushCachedBlocks mocks the same method in the chain service.
+func (_ *ChainService) FlushCachedBlocks(_ context.Context) error {
+	return nil
+}
+
 // HasInitSyncBlock mocks the same method in the chain service.
 func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
 	if s.InitSyncBlockRoots == nil {

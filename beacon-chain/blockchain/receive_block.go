@@ -46,6 +46,8 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
+	CachedBlock(root [32]byte) block.SignedBeaconBlock
+	FlushCachedBlocks(ctx context.Context) error
 	IsBlockRootProcessing(root [32]byte) bool
 }
 
@@ -167,6 +169,19 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 // (processed block which is not written to the DB yet).
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
+}
+
+// CachedBlock returns the processed block from the blocks cache (not written to the DB yet),
+// or nil if the block is not in the cache.
+func (s *Service) CachedBlock(root [32]byte) block.SignedBeaconBlock {
+	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+	return s.initSyncBlocks[root]
+}
+
+// FlushCachedBlocks writes the cached blocks to the DB. It is a no-op if the cache is empty.
+func (s *Service) FlushCachedBlocks(ctx context.Context) error {
+	return s.flushCachedBlocks(ctx)
 }
 
 func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {

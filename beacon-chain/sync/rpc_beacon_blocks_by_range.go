@@ -123,6 +123,10 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	ctx, span := trace.StartSpan(ctx, "sync.WriteBlockRangeToStream")
 	defer span.End()
 
+	// write the chain's cached blocks to the DB, so the latest processed blocks are served as well.
+	if err := s.cfg.chain.FlushCachedBlocks(ctx); err != nil {
+		log.WithError(err).Debug("Could not flush cached blocks")
+	}
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
 	blks, roots, err := s.cfg.beaconDB.Blocks(ctx, filter)
 	if err != nil {
