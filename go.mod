@@ -5,7 +5,7 @@ go 1.21
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/LFDT-Iguazu/iguazu-consensus v0.1.0
-	github.com/LFDT-Iguazu/iguazu-types v0.1.0
+	github.com/LFDT-Iguazu/iguazu-types v0.2.0
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.42.0
@@ -15,7 +15,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
 	github.com/ferranbt/fastssz v0.1.3
-	github.com/fjl/memsize v0.0.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/protobuf v1.3.2
