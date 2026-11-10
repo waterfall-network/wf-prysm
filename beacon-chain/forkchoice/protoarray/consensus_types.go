@@ -31,7 +31,21 @@ type AttestationsData struct {
 	justifiedRoot [32]byte
 	finalizedRoot [32]byte
 	votes         map[uint64]Vote
-	mu            sync.Mutex
+	// shared is set when votes is referenced by a copy. A shared map is never
+	// mutated: setVote clones it first (copy-on-write).
+	shared bool
+	mu     sync.Mutex
+}
+
+// setVote sets the validator vote, cloning the votes map first if a copy shares it.
+func (ad *AttestationsData) setVote(validator uint64, vote Vote) {
+	ad.mu.Lock()
+	defer ad.mu.Unlock()
+	if ad.shared || ad.votes == nil {
+		ad.votes = copyVotes(ad.votes)
+		ad.shared = false
+	}
+	ad.votes[validator] = vote
 }
 
 func copyVotes(votes map[uint64]Vote) map[uint64]Vote {
@@ -63,14 +77,21 @@ func (ad *AttestationsData) FinalizedRoot() [32]byte {
 	return bytesutil.ToBytes32(bytesutil.SafeCopyBytes(ad.finalizedRoot[:]))
 }
 
+// Copy returns a copy sharing the votes map with the original. Copying the
+// maps of every fork choice node took seconds per copy while finality stalls;
+// the map is cloned only when either side writes to it.
 func (ad *AttestationsData) Copy() *AttestationsData {
 	if ad == nil {
 		return nil
 	}
+	ad.mu.Lock()
+	defer ad.mu.Unlock()
+	ad.shared = true
 	return &AttestationsData{
-		justifiedRoot: ad.JustifiedRoot(),
-		finalizedRoot: ad.FinalizedRoot(),
-		votes:         ad.Votes(),
+		justifiedRoot: ad.justifiedRoot,
+		finalizedRoot: ad.finalizedRoot,
+		votes:         ad.votes,
+		shared:        true,
 	}
 }
 

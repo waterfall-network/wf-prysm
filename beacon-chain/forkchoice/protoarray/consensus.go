@@ -54,7 +54,7 @@ func (f *ForkChoice) setNodeVotes(validator uint64, vote Vote, node *int) (maxNo
 		index = *node
 	}
 	lastNode := f.store.nodes[index]
-	lastNode.attsData.votes[validator] = vote
+	lastNode.attsData.setVote(validator, vote)
 	return &index
 }
 
