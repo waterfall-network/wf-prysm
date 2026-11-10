@@ -47,6 +47,10 @@ type DagFinalizationFetcher interface {
 	IsGwatSynced() bool
 	// ResyncGwat restarts gwat synchronization after a failed head finalization.
 	ResyncGwat()
+	// HeadStateByRoot returns a copy of the head state if root is the head block root, or nil.
+	HeadStateByRoot(root [32]byte) state.BeaconState
+	// FlushCachedBlocks writes the processed blocks kept in memory to the DB.
+	FlushCachedBlocks(ctx context.Context) error
 }
 
 // Server implements eth.CoordinatorInternalServer for the iguazu-coordinator sidecar.
@@ -148,7 +152,7 @@ func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinaliza
 	blockRoot := bytesutil.ToBytes32(req.GetBlockRoot())
 	syncMode := gwatTypes.SyncMode(req.GetSyncMode())
 
-	headState, err := s.StateGen.SyncStateByRoot(ctx, blockRoot)
+	headState, err := s.finalizationState(ctx, blockRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "state for root %x not found: %v", blockRoot, err)
 	}
@@ -166,6 +170,20 @@ func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinaliza
 	}
 
 	return finalizationParamsToProto(params), nil
+}
+
+// finalizationState returns the post-state of the block. The head state is taken from
+// memory. For another block the state is loaded by stategen, which reads blocks from the
+// DB only, while processed blocks are written to the DB in background: the cached blocks
+// are flushed to the DB first.
+func (s *Server) finalizationState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	if st := s.DagFinalizer.HeadStateByRoot(blockRoot); st != nil && !st.IsNil() {
+		return st, nil
+	}
+	if err := s.DagFinalizer.FlushCachedBlocks(ctx); err != nil {
+		return nil, errors.Wrap(err, "flush cached blocks")
+	}
+	return s.StateGen.SyncStateByRoot(ctx, blockRoot)
 }
 
 // SubmitFinalizationResult receives the outcome of gwat ExecutionDagFinalize

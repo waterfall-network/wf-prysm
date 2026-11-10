@@ -16,6 +16,7 @@ package coordinator_internal
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"sync"
 	"testing"
@@ -28,8 +29,10 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/feed"
 	statefeed "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/feed/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/stategen"
 	ethpbv1 "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/eth/v1"
 	eth "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/util"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	gwatTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
 	"google.golang.org/grpc"
@@ -59,6 +62,22 @@ type fakeDagFinalizer struct {
 	cachedCheckpoint *gwatTypes.Checkpoint
 	gwatNotSynced    bool
 	resyncCalls      int
+	headRoot         [32]byte
+	headState        state.BeaconState
+	flushErr         error
+	flushCalls       int
+}
+
+func (f *fakeDagFinalizer) HeadStateByRoot(root [32]byte) state.BeaconState {
+	if f.headState == nil || root != f.headRoot {
+		return nil
+	}
+	return f.headState
+}
+
+func (f *fakeDagFinalizer) FlushCachedBlocks(context.Context) error {
+	f.flushCalls++
+	return f.flushErr
 }
 
 func (f *fakeDagFinalizer) IsGwatSynced() bool { return !f.gwatNotSynced }
@@ -405,4 +424,56 @@ func TestFinalizationParamsToProto_RoundTrip(t *testing.T) {
 	assert.Equal(t, uint64(2), op.GetActivationEpoch())
 	assert.Equal(t, uint64(100), op.GetExitEpoch())
 	assert.Equal(t, balance.Bytes(), op.GetBalanceWei())
+}
+
+func TestGetFinalizationParams_HeadStateFromMemory(t *testing.T) {
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	root := [32]byte{0x0a}
+	finalizer := &fakeDagFinalizer{headRoot: root, headState: st}
+	srv := &Server{
+		Ctx:          context.Background(),
+		StateGen:     stategen.New(nil),
+		DagFinalizer: finalizer,
+	}
+
+	resp, err := srv.GetFinalizationParams(context.Background(), &eth.GetFinalizationParamsRequest{
+		BlockRoot: root[:],
+		SyncMode:  uint32(gwatTypes.NoSync),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, 0, finalizer.flushCalls, "the head state must not need the DB")
+}
+
+func TestGetFinalizationParams_FlushesBlocksForOtherRoot(t *testing.T) {
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	root := [32]byte{0x0b}
+	sg := stategen.New(nil)
+	require.NoError(t, sg.AddSyncStateCache(root, st))
+	finalizer := &fakeDagFinalizer{headRoot: [32]byte{0x0a}, headState: st}
+	srv := &Server{
+		Ctx:          context.Background(),
+		StateGen:     sg,
+		DagFinalizer: finalizer,
+	}
+
+	_, err = srv.GetFinalizationParams(context.Background(), &eth.GetFinalizationParamsRequest{BlockRoot: root[:]})
+	require.NoError(t, err)
+	assert.Equal(t, 1, finalizer.flushCalls)
+}
+
+func TestGetFinalizationParams_FlushError(t *testing.T) {
+	finalizer := &fakeDagFinalizer{flushErr: errors.New("disk full")}
+	srv := &Server{
+		Ctx:          context.Background(),
+		StateGen:     stategen.New(nil),
+		DagFinalizer: finalizer,
+	}
+
+	_, err := srv.GetFinalizationParams(context.Background(), &eth.GetFinalizationParamsRequest{BlockRoot: make([]byte, 32)})
+	require.Error(t, err)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Contains(t, err.Error(), "disk full")
 }
