@@ -155,7 +155,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error: invalid sync operation")
-		return err
+		return invalidBlock(err)
 	}
 
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
@@ -163,7 +163,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error")
-		return err
+		return invalidBlock(err)
 	}
 
 	//validate limitation of all spines count
@@ -174,7 +174,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			"spinesCount":    spinesCount,
 			"AllSpinesLimit": params.BeaconConfig().AllSpinesLimit,
 		}).Error("onBlock error")
-		return err
+		return invalidBlock(err)
 	}
 
 	log.WithError(err).WithFields(logrus.Fields{

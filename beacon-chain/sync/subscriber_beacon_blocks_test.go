@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -122,6 +123,22 @@ func TestService_BeaconBlockSubscribe_ExecutionEngineTimesOut(t *testing.T) {
 		badBlockCache:  lruwrpr.New(10),
 	}
 	require.ErrorIs(t, powchain.ErrHTTPTimeout, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()))
+	require.Equal(t, 0, len(s.badBlockCache.Keys()))
+	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
+}
+
+func TestService_BeaconBlockSubscribe_NodeSideErrorDoesNotMarkBad(t *testing.T) {
+	nodeErr := fmt.Errorf("could not process block: %w", context.DeadlineExceeded)
+	s := &Service{
+		cfg: &config{
+			chain: &chainMock.ChainService{
+				ReceiveBlockMockErr: nodeErr,
+			},
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+	require.ErrorIs(t, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()), context.DeadlineExceeded)
 	require.Equal(t, 0, len(s.badBlockCache.Keys()))
 	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
 }

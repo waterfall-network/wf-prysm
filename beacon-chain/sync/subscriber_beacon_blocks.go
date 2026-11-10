@@ -38,7 +38,11 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 			return err
 		}
 		interop.WriteBlockToDisk(signed, true /*failed*/)
-		s.setBadBlock(ctx, root)
+		// A node-side failure (timeout, missing state, gwat) must not mark the block as bad:
+		// the block and all its descendants would be rejected until the node restart.
+		if blockchain.IsInvalidBlock(err) {
+			s.setBadBlock(ctx, root)
+		}
 		return err
 	}
 
