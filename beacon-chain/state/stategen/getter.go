@@ -309,8 +309,8 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	if err != nil {
 		return resState, err
 	}
-	// cache result of the ReplayBlocks method
-	if err = s.loadStateCache.Put(ctx, blockRoot, resState); err != nil {
+	// cache a copy of the ReplayBlocks result: callers mutate the returned state
+	if err = s.loadStateCache.Put(ctx, blockRoot, resState.Copy()); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"root": fmt.Sprintf("%#x", blockRoot),
 		}).Error("Load state by root: replay cache put failed")
@@ -485,8 +485,8 @@ func (s *State) loadSyncStateByRoot(ctx context.Context, blockRoot [32]byte) (st
 	if err != nil {
 		return resState, err
 	}
-	// cache result of the ReplayBlocks method
-	if err = s.loadStateCache.Put(ctx, blockRoot, resState); err != nil {
+	// cache a copy of the ReplayBlocks result: callers mutate the returned state
+	if err = s.loadStateCache.Put(ctx, blockRoot, resState.Copy()); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"root": fmt.Sprintf("%#x", blockRoot),
 		}).Error("Load state by root: replay cache put failed")
@@ -541,6 +541,13 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 
 		if s.syncStateCache.has(parentRoot) {
 			return s.syncStateCache.get(parentRoot), nil
+		}
+
+		// Does the state exist in replay cache. Without it, loading states of
+		// consecutive blocks (e.g. filling in fork choice on startup) replays every
+		// one of them from the last saved state, which is quadratic in their number.
+		if st, cacheErr := s.loadStateCache.Get(ctx, parentRoot); cacheErr == nil && st != nil && !st.IsNil() {
+			return st, nil
 		}
 
 		// Does the state exist in finalized info cache.
