@@ -609,9 +609,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 // BatchHandlerBlockInfoFetcherFunc provides access to blocks info
 // including stored in db over context for state transition while initial-sync.
 func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.SignedBeaconBlock, blockRoots [][32]byte) params.CtxBlockFetcher {
+	fromDB := db.BlockInfoFetcherFunc(dbRo)
 	return func(ctx context.Context, blockRoot [32]byte) (types.ValidatorIndex, types.Slot, uint64, error) {
 		var blk block.SignedBeaconBlock
-		var err error
 
 		for i, root := range blockRoots {
 			if blockRoot == root {
@@ -621,13 +621,7 @@ func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.Sig
 		}
 		// if not found in batch
 		if blk == nil {
-			blk, err = dbRo.Block(ctx, blockRoot)
-			if err != nil {
-				return 0, 0, 0, err
-			}
-		}
-		if blk == nil {
-			return 0, 0, 0, db.ErrNotFound
+			return fromDB(ctx, blockRoot)
 		}
 
 		votesIncluded := uint64(0)
