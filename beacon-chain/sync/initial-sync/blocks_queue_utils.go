@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 )
 
 // resetWithBlocks removes all state machines, then re-adds enough machines to contain all provided
@@ -72,4 +73,18 @@ func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot types.Slot) e
 	}
 	q.smm.addStateMachine(nonSkippedSlot)
 	return nil
+}
+
+// finalizedRestartSlot returns the first slot after the finalized checkpoint, if it is lower than
+// a given start slot (i.e. restarting from it allows to re-fetch non-finalized blocks).
+func (q *blocksQueue) finalizedRestartSlot(startSlot types.Slot) (types.Slot, bool) {
+	finalizedSlot, err := slots.EpochStart(q.chain.FinalizedCheckpt().Epoch)
+	if err != nil {
+		return 0, false
+	}
+	restartSlot := finalizedSlot + 1
+	if restartSlot >= startSlot {
+		return 0, false
+	}
+	return restartSlot, true
 }

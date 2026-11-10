@@ -16,6 +16,7 @@ import (
 	p2pt "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/p2p/testing"
 	beaconsync "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/sync"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/cmd/beacon-chain/flags"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/container/slice"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	eth "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
@@ -1363,5 +1364,47 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot), "slot %d", blk.Block.Slot)
+	}
+}
+
+func TestBlocksQueue_finalizedRestartSlot(t *testing.T) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	tests := []struct {
+		name           string
+		finalizedEpoch types.Epoch
+		startSlot      types.Slot
+		wantSlot       types.Slot
+		wantOk         bool
+	}{
+		{
+			name:           "start slot far after finalized",
+			finalizedEpoch: 10,
+			startSlot:      slotsPerEpoch*20 + 5,
+			wantSlot:       slotsPerEpoch*10 + 1,
+			wantOk:         true,
+		},
+		{
+			name:           "start slot right after finalized",
+			finalizedEpoch: 10,
+			startSlot:      slotsPerEpoch*10 + 1,
+			wantOk:         false,
+		},
+		{
+			name:           "start slot before finalized",
+			finalizedEpoch: 10,
+			startSlot:      slotsPerEpoch * 5,
+			wantOk:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := &mock.ChainService{
+				FinalizedCheckPoint: &eth.Checkpoint{Epoch: tt.finalizedEpoch},
+			}
+			queue := &blocksQueue{chain: mc}
+			gotSlot, gotOk := queue.finalizedRestartSlot(tt.startSlot)
+			assert.Equal(t, tt.wantOk, gotOk)
+			assert.Equal(t, tt.wantSlot, gotSlot)
+		})
 	}
 }
