@@ -47,8 +47,9 @@ var blockInfoCache = func() *lru.Cache {
 func BlockInfoFetcherFunc(db ReadOnlyDatabase) params.CtxBlockFetcher {
 	return func(ctx context.Context, blockRoot [32]byte) (types.ValidatorIndex, types.Slot, uint64, error) {
 		if v, ok := blockInfoCache.Get(blockRoot); ok {
-			info := v.(blockInfo)
-			return info.proposerIndex, info.slot, info.votesIncluded, nil
+			if info, ok := v.(blockInfo); ok {
+				return info.proposerIndex, info.slot, info.votesIncluded, nil
+			}
 		}
 		block, err := db.Block(ctx, blockRoot)
 		if err != nil {
