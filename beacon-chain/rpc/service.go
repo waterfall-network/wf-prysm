@@ -219,6 +219,7 @@ func (s *Service) Start() {
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
+	go validatorServer.WarmUpParentByOptimisticSpines()
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
