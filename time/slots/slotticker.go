@@ -78,8 +78,8 @@ func (s *SlotTicker) start(
 	offset time.Duration,
 	secondsPerSlot uint64,
 	since, until func(time.Time) time.Duration,
-	after func(time.Duration) <-chan time.Time) {
-
+	after func(time.Duration) <-chan time.Time,
+) {
 	genesisSec := uint64(genesisTime.Unix()) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
 
 	go func() {
