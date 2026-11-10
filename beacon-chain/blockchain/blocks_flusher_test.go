@@ -21,6 +21,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db"
 	testDB "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db/testing"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
@@ -129,4 +130,25 @@ func TestService_blocksFlusher_Background(t *testing.T) {
 
 	s.cancel()
 	waitFor(t, func() bool { return !s.blocksFlusherRunning.Load() })
+}
+
+func TestService_saveInitSyncBlock_BlockInfoAvailableBeforeFlush(t *testing.T) {
+	ctx := context.Background()
+	s := setupBeaconChain(t, testDB.SetupDB(t))
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 5
+	b.Block.ProposerIndex = 7
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	s.saveInitSyncBlock(r, wb)
+	require.Equal(t, false, s.cfg.BeaconDB.HasBlock(ctx, r))
+
+	// proposer rewards read the block info via the db fetcher.
+	proposerIndex, slot, _, err := db.BlockInfoFetcherFunc(s.cfg.BeaconDB)(ctx, r)
+	require.NoError(t, err)
+	require.Equal(t, types.ValidatorIndex(7), proposerIndex)
+	require.Equal(t, types.Slot(5), slot)
 }

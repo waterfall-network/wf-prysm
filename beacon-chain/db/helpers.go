@@ -20,6 +20,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
 )
 
 // blockInfoCacheSize bounds the number of cached block infos.
@@ -51,23 +52,34 @@ func BlockInfoFetcherFunc(db ReadOnlyDatabase) params.CtxBlockFetcher {
 				return info.proposerIndex, info.slot, info.votesIncluded, nil
 			}
 		}
-		block, err := db.Block(ctx, blockRoot)
+		blk, err := db.Block(ctx, blockRoot)
 		if err != nil {
 			return 0, 0, 0, err
 		}
-		if block == nil {
+		if blk == nil || blk.IsNil() {
 			return 0, 0, 0, ErrNotFound
 		}
-		votesIncluded := uint64(0)
-		for _, att := range block.Block().Body().Attestations() {
-			votesIncluded += att.AggregationBits.Count()
-		}
-		info := blockInfo{
-			proposerIndex: block.Block().ProposerIndex(),
-			slot:          block.Block().Slot(),
-			votesIncluded: votesIncluded,
-		}
+		info := newBlockInfo(blk)
 		blockInfoCache.Add(blockRoot, info)
 		return info.proposerIndex, info.slot, info.votesIncluded, nil
+	}
+}
+
+// CacheBlockInfo adds the block info to the cache used by BlockInfoFetcherFunc.
+// It makes the processed block available for the proposer rewards calculation
+// before the block is written to the DB.
+func CacheBlockInfo(blockRoot [32]byte, blk block.SignedBeaconBlock) {
+	blockInfoCache.Add(blockRoot, newBlockInfo(blk))
+}
+
+func newBlockInfo(blk block.SignedBeaconBlock) blockInfo {
+	votesIncluded := uint64(0)
+	for _, att := range blk.Block().Body().Attestations() {
+		votesIncluded += att.AggregationBits.Count()
+	}
+	return blockInfo{
+		proposerIndex: blk.Block().ProposerIndex(),
+		slot:          blk.Block().Slot(),
+		votesIncluded: votesIncluded,
 	}
 }

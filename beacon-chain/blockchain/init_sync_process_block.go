@@ -5,13 +5,17 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/db"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
 )
 
 var errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
 
 // This saves a beacon block to the initial sync blocks cache.
+// The block info is cached for the proposer rewards calculation,
+// as it reads the block info from the DB (see db.BlockInfoFetcherFunc).
 func (s *Service) saveInitSyncBlock(r [32]byte, b block.SignedBeaconBlock) {
+	db.CacheBlockInfo(r, b)
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks[r] = b
