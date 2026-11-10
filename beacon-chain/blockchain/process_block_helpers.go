@@ -473,11 +473,11 @@ func (s *Service) verifyBlkSyncOps(ctx context.Context, block block.BeaconBlock,
 	//1. Validate by op pool: if is valide - break.
 	notFoundOpsWth, err := s.verifyWithdrawalsInPool(block)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	notFoundOpsExit, err := s.verifyExitsInPool(block)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	if len(notFoundOpsWth) == 0 && len(notFoundOpsExit) == 0 {
 		return nil
@@ -486,12 +486,15 @@ func (s *Service) verifyBlkSyncOps(ctx context.Context, block block.BeaconBlock,
 	// 2. Validate by parent state: if parentState contains SyncOp - block is invalid.
 	err = s.checkAnyWithdrawalsInParentState(preState, notFoundOpsWth)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	err = s.checkAnyExitsInParentState(preState, notFoundOpsExit)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
+
+	// 3. Not found by the node itself (pool or leaves states) is not proof of an invalid block:
+	// the node may lag behind gwat or other forks, so the error below is not marked as invalid.
 
 	//3. Validate by leaves' states: if any state of leaves contains SyncOp - block is valid.
 	roots, slots := s.ForkChoicer().Tips()

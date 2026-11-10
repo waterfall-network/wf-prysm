@@ -155,7 +155,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error: invalid sync operation")
-		return invalidBlock(err)
+		// verifyBlkSyncOps marks only the content failures as invalid block
+		return err
 	}
 
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
