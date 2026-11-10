@@ -76,6 +76,8 @@ type Server struct {
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  powchain.EngineCaller
+
+	activeVals activeValsCount
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
