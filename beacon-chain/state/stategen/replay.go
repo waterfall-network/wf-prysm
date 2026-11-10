@@ -94,19 +94,13 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 
 	// The last retrieved block root has to match input end block root.
 	// Covers the edge case if there's multiple blocks on the same end slot,
-	// the end root may not be the last index in `blockRoots`.
-	for length >= 3 && blocks[length-1].Block().Slot() == blocks[length-2].Block().Slot() && blockRoots[length-1] != endBlockRoot {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
+	// the end root may be at any index among them in `blockRoots`. Blocks after it
+	// are its siblings on the end slot and are dropped.
+	for length > 0 && blockRoots[length-1] != endBlockRoot && blocks[length-1].Block().Slot() == endSlot {
 		length--
-		if blockRoots[length-2] == endBlockRoot {
-			length--
-			break
-		}
 	}
 
-	if blockRoots[length-1] != endBlockRoot {
+	if length == 0 || blockRoots[length-1] != endBlockRoot {
 		return nil, errors.New("end block roots don't match")
 	}
 
