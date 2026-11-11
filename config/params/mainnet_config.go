@@ -53,10 +53,10 @@ var mainnetNetworkConfig = &NetworkConfig{
 	SyncCommsSubnetKey:              "syncnets",
 	MinimumPeersInSubnetSearch:      20,
 	BootstrapNodes: []string{
-		"enr:-LG4QAGJyiJYWVjQnJ2ANfWE_AtbYnYEVcYS3k5iyUaALWKBI7OL30dc_-Nxigt7FpiB4b0cfmq62iGXB76C8BmRVGeGAZBd0Ihph2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhCImhDKJc2VjcDI1NmsxoQND0I1D6IIk-kwev1LftepaWrPOyN3pgkTbDrHfJN0bGIN1ZHCCD6A",
-		"enr:-LG4QPtAAgR9hmREywlznOtvkvbLFm5APNQld7Tltd7dNL_LPzpHle7aDVO4VNRnnsHlLFicV52QTCNTlBLUusCtV-6GAZXtVWcsh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhNEm-WGJc2VjcDI1NmsxoQIf3DY_SItegJhSORDEGH4KR87_c0FswoCKvfgiL0f8poN1ZHCCD6I",
 		"enr:-LG4QIE_m6Gco6LKmo112WD25u0MJSQ1Yh0XGk3bpfbB0D3ZGmQTmu7KPDdGwDBqePiWX2kkfYFBiO-93-ZVb4ewIJqGAZXtVXsXh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhIrHpF-Jc2VjcDI1NmsxoQPOo4szWRgOOHW4AQP-5och6pR48zPe0enBVCAqQCif3IN1ZHCCD6I",
-		"enr:-LG4QG8wVMvYeYIBK-fFIaHiTjg0Np6WnOzGKYdJFuHN29PDenOjsk_Nag-j59LIvl7D5MuBi59GuNpWzuYhxThtrAOGAZbuS7v2h2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhC0gm06Jc2VjcDI1NmsxoQPbgcT_SP-ER49oC9hq6QkHgX96js883U5xwW9ZZxixJoN1ZHCCD6I",
+		"enr:-LG4QLmaUZSLvzNIQiRdaHYSreMn5x5LyN6RuGzp2VwYLS40SXZHJkqaern4WSzNC8jMgE89YOGxoStQoilOQyf8iNaGAZ8ZPeHIh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhIeU672Jc2VjcDI1NmsxoQIf3DY_SItegJhSORDEGH4KR87_c0FswoCKvfgiL0f8poN1ZHCCD6I",
+		"enr:-LG4QLtGU6GHUORn5DA-y70eFkDThzd2_iU68pal0HMjYUWGHEekd03Dc8bOJBv3Wpf80k_dGYAcJQq-ANC67HbH6CGGAaDtJT1Zh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhIeU63OJc2VjcDI1NmsxoQMJEfE6jvMEfxVO0qO9KYinkGQpnsz5uYZ_q6QNLSo9nIN1ZHCCD6I",
+		"enr:-LG4QANmkxAs7bzRkUZiBC1p19rs-K8FAD8dZVQKBQdtOzRWMGGWISr3AjOPdbtaohL5F2aQM4dWoI49omDnF2Ch7lqGAZ8ZPsRBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB5pkc4AAAgCf__________gmlkgnY0gmlwhIeU6uiJc2VjcDI1NmsxoQPbgcT_SP-ER49oC9hq6QkHgX96js883U5xwW9ZZxixJoN1ZHCCD6I",
 	},
 }
 
@@ -210,20 +210,23 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisEpoch:         genesisForkEpoch,
-	GenesisForkVersion:   []byte{0, 0, 0, 0},
-	AltairForkVersion:    []byte{1, 0, 0, 0},
-	AltairForkEpoch:      mainnetAltairForkEpoch,
-	DelegateForkSlot:     0,
-	PrefixFinForkSlot:    0,
-	FinEth1ForkSlot:      0,
-	BlockVotingForkSlot:  216000,
-	ValSyncProcForkSlot:  math.MaxUint64,
-	FcTgTreeForkSlot:     3_400_800,
-	ValOpVerifyForkSlot:  3_600_000,
-	BellatrixForkVersion: []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
-	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	GenesisEpoch:        genesisForkEpoch,
+	GenesisForkVersion:  []byte{0, 0, 0, 0},
+	AltairForkVersion:   []byte{1, 0, 0, 0},
+	AltairForkEpoch:     mainnetAltairForkEpoch,
+	DelegateForkSlot:    0,
+	PrefixFinForkSlot:   0,
+	FinEth1ForkSlot:     0,
+	BlockVotingForkSlot: 216000,
+	ValSyncProcForkSlot: math.MaxUint64,
+	FcTgTreeForkSlot:    3_400_800,
+	ValOpVerifyForkSlot: 3_600_000,
+	// must be kept in sync with gwat ForkSlotUpSecondsPerSlot/UpSecondsPerSlot
+	UpSecondsPerSlotForkSlot: 11_884_800, // '2026-10-01T16:00:00.000Z'
+	UpSecondsPerSlot:         3,
+	BellatrixForkVersion:     []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:       mainnetBellatrixForkEpoch,
+	ShardingForkVersion:      []byte{3, 0, 0, 0},
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

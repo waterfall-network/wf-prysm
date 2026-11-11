@@ -60,6 +60,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.PrevotingDisableFlag,
+			cmd.UpSecondsPerSlotForkSlot,
+			cmd.UpSecondsPerSlot,
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.ConfigFileFlag,

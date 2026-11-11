@@ -316,8 +316,64 @@ func Test_CalculateBaseReward(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := altair.CalculateBaseReward(cfg, tt.validatorsNum, tt.committeesNum*tt.membersPerCommitteeNum, tt.rewardMultiplier)
+			got := altair.CalculateBaseReward(cfg, types.Slot(0), tt.validatorsNum, tt.committeesNum*tt.membersPerCommitteeNum, tt.rewardMultiplier)
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_CalculateBaseReward_UpSecondsPerSlotFork(t *testing.T) {
+	const (
+		validatorsNum    = 2048
+		activeForSlot    = 512
+		rewardMultiplier = 2.0
+	)
+	forkSlot := types.Slot(640)
+
+	// Mirrors the mainnet slot duration fork: 6 seconds per slot before the fork, 3 seconds after.
+	forkedCfg := func() *params.BeaconChainConfig {
+		cfg := params.MinimalSpecConfig()
+		cfg.SecondsPerSlot = 6
+		cfg.UpSecondsPerSlot = 3
+		cfg.UpSecondsPerSlotForkSlot = forkSlot
+		return cfg
+	}
+
+	baseReward := func(cfg *params.BeaconChainConfig, slot types.Slot) uint64 {
+		return altair.CalculateBaseReward(cfg, slot, validatorsNum, activeForSlot, rewardMultiplier)
+	}
+
+	t.Run("the new slot duration is applied since the fork slot", func(t *testing.T) {
+		cfg := forkedCfg()
+		before := baseReward(cfg, forkSlot-1)
+		at := baseReward(cfg, forkSlot)
+		after := baseReward(cfg, forkSlot+1000)
+
+		require.Equal(t, at, after)
+		// Slots are twice as short since the fork, so the per slot reward is twice as small.
+		require.Equal(t, true, at*2 == before || at*2 == before-1,
+			fmt.Sprintf("want base reward ~%d since the fork, got %d", before/2, at))
+	})
+
+	t.Run("emission per unit of time is kept across the fork", func(t *testing.T) {
+		cfg := forkedCfg()
+		perSecondBefore := float64(baseReward(cfg, forkSlot-1)) / float64(cfg.SecondsPerSlot)
+		perSecondAfter := float64(baseReward(cfg, forkSlot)) / float64(cfg.UpSecondsPerSlot)
+
+		// The only allowed difference comes from truncating the base reward to gwei.
+		require.Equal(t, true, math.Abs(perSecondBefore-perSecondAfter) <= 1,
+			fmt.Sprintf("emission per second changed: %f -> %f", perSecondBefore, perSecondAfter))
+	})
+
+	t.Run("zero UpSecondsPerSlot disables the fork", func(t *testing.T) {
+		cfg := forkedCfg()
+		cfg.UpSecondsPerSlot = 0
+		require.Equal(t, baseReward(cfg, forkSlot-1), baseReward(cfg, forkSlot+1000))
+	})
+
+	t.Run("unreachable fork slot keeps the base slot duration", func(t *testing.T) {
+		cfg := forkedCfg()
+		cfg.UpSecondsPerSlotForkSlot = types.Slot(math.MaxUint64)
+		require.Equal(t, baseReward(cfg, 0), baseReward(cfg, types.Slot(math.MaxUint64-1)))
+	})
 }

@@ -15,6 +15,8 @@ import (
 )
 
 // Prepare attestations for fork choice three times per slot.
+// Housekeeping cadence, fixed at process start. It stays on the pre-fork slot duration
+// after UpSecondsPerSlotForkSlot, which only makes it fire less often per slot.
 var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
 
 // This prepares fork choice attestations by running batchForkChoiceAtts

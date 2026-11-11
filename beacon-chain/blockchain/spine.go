@@ -19,12 +19,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/sirupsen/logrus"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 	gwatTypes "gitlab.waterfall.network/waterfall/protocol/gwat/core/types"
 )
@@ -63,7 +62,7 @@ func (s *Service) GetOptimisticSpines(ctx context.Context, baseSpine gwatCommon.
 		return optSpines, nil
 	}
 
-	tout := time.Duration((params.BeaconConfig().SecondsPerSlot*1000)/4) * time.Millisecond
+	tout := slots.DivideSlotByAt(s.CurrentSlot(), 4 /* a quarter of the slot duration */)
 	reqCtx, cancel := context.WithTimeout(ctx, tout)
 	defer cancel()
 	optSpines, err := s.cfg.ExecutionEngineCaller.ExecutionDagGetOptimisticSpines(reqCtx, baseSpine)
@@ -125,8 +124,8 @@ func (s *Service) GetCacheOptimisticSpines(baseSpine gwatCommon.Hash) []gwatComm
 
 // SetValidatedBlockInfo caches info of the latest success validated block.
 func (s *Service) SetValidatedBlockInfo(lastValidRoot []byte, lastValidSlot types.Slot) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.lastValidRoot = lastValidRoot
 	s.spineData.lastValidSlot = lastValidSlot
@@ -142,8 +141,8 @@ func (s *Service) GetValidatedBlockInfo() ([]byte, types.Slot) {
 
 // CacheGwatCheckpoint caches the current gwat checkpoint.
 func (s *Service) CacheGwatCheckpoint(gwatCheckpoint *gwatTypes.Checkpoint) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.gwatCheckpoint = gwatCheckpoint
 }
@@ -162,8 +161,8 @@ func (s *Service) GetCachedGwatCheckpoint(cpRoot []byte) *gwatTypes.Checkpoint {
 
 // CacheGwatCoordinatedState caches the current gwat coordinated state.
 func (s *Service) CacheGwatCoordinatedState(coordState *gwatTypes.Checkpoint) {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.coordState = coordState
 }
@@ -178,8 +177,8 @@ func (s *Service) GetCachedGwatCoordinatedState() *gwatTypes.Checkpoint {
 
 // ResetCachedGwatCoordinatedState set the cached gwat coordinated state to nil.
 func (s *Service) ResetCachedGwatCoordinatedState() {
-	s.spineData.RLock()
-	defer s.spineData.RUnlock()
+	s.spineData.Lock()
+	defer s.spineData.Unlock()
 
 	s.spineData.coordState = nil
 }

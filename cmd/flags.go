@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -87,6 +88,18 @@ var (
 	PrevotingDisableFlag = &cli.BoolFlag{
 		Name:  "prevoting-disable",
 		Usage: "Disables prevoting process",
+	}
+	// UpSecondsPerSlotForkSlot is the first slot which lasts UpSecondsPerSlot seconds instead of SecondsPerSlot.
+	UpSecondsPerSlotForkSlot = &cli.Uint64Flag{
+		Name:  "up-seconds-per-slot-fork-slot",
+		Usage: "The slot to start to use the updated slot duration (must be kept in sync with the gwat forkSlotUpSecondsPerSlot).",
+		Value: math.MaxUint64,
+	}
+	// UpSecondsPerSlot is the slot duration in seconds applied since the UpSecondsPerSlotForkSlot fork.
+	UpSecondsPerSlot = &cli.Uint64Flag{
+		Name:  "up-seconds-per-slot",
+		Usage: "The slot duration in seconds applied since the up-seconds-per-slot-fork-slot slot (must be kept in sync with the gwat upSecondsPerSlot).",
+		Value: 3,
 	}
 	// NoDiscovery specifies whether we are running a local network and have no need for connecting
 	// to the bootstrap nodes in the cloud

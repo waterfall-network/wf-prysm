@@ -102,6 +102,7 @@ func (s *Service) initGwatSync() {
 
 			// 4. start main work process
 			s.runProcessDagFinalize()
+			s.isGwatSynced.Set()
 			return
 		}
 	}
@@ -368,16 +369,38 @@ func (s *Service) runGwatSynchronization(ctx context.Context) error {
 
 // runProcessDagFinalize drains newHeadCh to prevent goroutine leaks.
 // Ongoing dag finalization is handled by the iguazu-coordinator sidecar via gRPC.
+// It starts the drain only once: initGwatSync runs again after a failed head
+// finalization and calls it again.
 func (s *Service) runProcessDagFinalize() {
-	go func() {
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case <-s.newHeadCh:
+	s.drainNewHeadsOnce.Do(func() {
+		go func() {
+			for {
+				select {
+				case <-s.ctx.Done():
+					return
+				case <-s.newHeadCh:
+				}
 			}
-		}
-	}()
+		}()
+	})
+}
+
+// IsGwatSynced reports whether gwat synchronization is completed and gwat is
+// ready to finalize new heads.
+func (s *Service) IsGwatSynced() bool {
+	return s.isGwatSynced.IsSet()
+}
+
+// ResyncGwat restarts gwat synchronization after a failed head finalization.
+// It does nothing while a synchronization is running, so concurrent failure
+// reports start only one synchronization.
+func (s *Service) ResyncGwat() {
+	if !s.isGwatSynced.SetToIf(true, false) {
+		return
+	}
+	log.Warn("Gwat sync: restart after failed head finalization")
+	s.ResetCachedGwatCoordinatedState()
+	go s.initGwatSync()
 }
 
 // processDagFinalization implements dag finalization procedure.
@@ -1002,7 +1025,7 @@ func (s *Service) processDagSyncSpines(blockState state.BeaconState) {
 		"spines": syncSeq,
 	}).Info("Dag sync spines: sync params")
 
-	tout := time.Duration((params.BeaconConfig().SecondsPerSlot*1000)/4) * time.Millisecond
+	tout := slots.DivideSlotByAt(s.CurrentSlot(), 4 /* a quarter of the slot duration */)
 	reqCtx, cancel := context.WithTimeout(ctx, tout)
 	defer cancel()
 	_, err := s.cfg.ExecutionEngineCaller.ExecutionDagSyncSpines(reqCtx, syncSeq)

@@ -32,7 +32,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	ifaceKey, err := convertToInterfacePrivkey(priKey)
 	if err != nil {
-		log.Warning(err, "could not get private key")
+		log.Fatalf("Could not get private key: %v", err)
 	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
@@ -119,7 +119,7 @@ func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 		log.Debug("ECDSA private key generated")
 		pk, err := convertToInterfacePrivkey(privkey)
 		if err != nil {
-			log.Warning(err, "could not get private key")
+			return errors.Wrap(err, "could not get private key")
 		}
 		return cfg.Apply(libp2p.Identity(pk))
 	}

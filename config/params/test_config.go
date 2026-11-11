@@ -32,6 +32,7 @@ func TestConfig() *BeaconChainConfig {
 	cfg.OptValidatorsNum = 3_000_000
 
 	cfg.SecondsPerSlot = 4
+	cfg.UpSecondsPerSlot = 4
 
 	cfg.InitializeForkSchedule()
 

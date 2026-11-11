@@ -48,7 +48,7 @@ func NewSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
+	ticker.start(genesisTime, 0, secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
 	return ticker
 }
 
@@ -65,30 +65,42 @@ func NewSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 		c:    make(chan types.Slot),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime.Add(offset), secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
+	ticker.start(genesisTime, offset, secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
 	return ticker
 }
 
+// start emits slot numbers on the ticker channel at the start time of every slot, shifted by
+// offset. Tick times are taken from ToTime rather than derived from a fixed slot duration, so
+// the ticker follows the UpSecondsPerSlotForkSlot slot duration change without a restart.
+// secondsPerSlot is only used to detect that the current time is still before genesis.
 func (s *SlotTicker) start(
 	genesisTime time.Time,
+	offset time.Duration,
 	secondsPerSlot uint64,
 	since, until func(time.Time) time.Duration,
-	after func(time.Duration) <-chan time.Time) {
-	d := time.Duration(secondsPerSlot) * time.Second
+	after func(time.Duration) <-chan time.Time,
+) {
+	genesisSec := uint64(genesisTime.Unix()) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
 
 	go func() {
-		sinceGenesis := since(genesisTime)
-
-		var nextTickTime time.Time
-		var slot types.Slot
-		if sinceGenesis < d {
+		var (
+			nextTickTime time.Time
+			slot         types.Slot
+		)
+		sinceGenesis := since(genesisTime.Add(offset))
+		if sinceGenesis < time.Duration(secondsPerSlot)*time.Second {
 			// Handle when the current time is before the genesis time.
-			nextTickTime = genesisTime
+			nextTickTime = genesisTime.Add(offset)
 			slot = 0
 		} else {
-			nextTick := sinceGenesis.Truncate(d) + d
-			nextTickTime = genesisTime.Add(nextTick)
-			slot = types.Slot(nextTick / d)
+			// Tick on the slot following the one the current time belongs to.
+			slot = SlotByTimestamp(genesisSec, uint64(genesisTime.Add(sinceGenesis).Unix())) + 1
+			startTime, err := ToTime(genesisSec, slot)
+			if err != nil {
+				log.WithError(err).WithField("slot", slot).Error("Slot ticker: start slot time failed")
+				return
+			}
+			nextTickTime = startTime.Add(offset)
 		}
 
 		for {
@@ -97,7 +109,12 @@ func (s *SlotTicker) start(
 			case <-after(waitTime):
 				s.c <- slot
 				slot++
-				nextTickTime = nextTickTime.Add(d)
+				startTime, err := ToTime(genesisSec, slot)
+				if err != nil {
+					log.WithError(err).WithField("slot", slot).Error("Slot ticker: start slot time failed")
+					return
+				}
+				nextTickTime = startTime.Add(offset)
 			case <-s.done:
 				return
 			}

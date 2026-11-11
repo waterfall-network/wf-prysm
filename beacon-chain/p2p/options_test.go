@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"io/ioutil"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/assert"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/testing/require"
@@ -42,6 +44,37 @@ func TestPrivateKeyLoading(t *testing.T) {
 	newRaw, err := newPkey.Raw()
 	require.NoError(t, err)
 	assert.DeepEqual(t, rawBytes, newRaw, "Private keys do not match")
+}
+
+// TestConvertToInterfacePrivkey_ShortScalar guards the leading-zero case: big.Int.Bytes()
+// drops the most significant zero bytes, so roughly one generated key in 256 marshals to
+// fewer than 32 bytes and used to be rejected with "expected secp256k1 data size to be 32".
+func TestConvertToInterfacePrivkey_ShortScalar(t *testing.T) {
+	tests := []struct {
+		name string
+		d    []byte
+	}{
+		{name: "one leading zero byte", d: append([]byte{0x00}, bytes.Repeat([]byte{0xAB}, 31)...)},
+		{name: "two leading zero bytes", d: append([]byte{0x00, 0x00}, bytes.Repeat([]byte{0xCD}, 30)...)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			privKey, err := gethCrypto.ToECDSA(tt.d)
+			require.NoError(t, err)
+			require.Equal(t, true, len(privKey.D.Bytes()) < 32, "test key must have a short scalar")
+
+			ifaceKey, err := convertToInterfacePrivkey(privKey)
+			require.NoError(t, err)
+
+			raw, err := ifaceKey.Raw()
+			require.NoError(t, err)
+			assert.DeepEqual(t, tt.d, raw, "Private key must round-trip with its leading zero bytes")
+
+			// The nil dereference reported from buildOptions happened right here.
+			_, err = peer.IDFromPublicKey(ifaceKey.GetPublic())
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestIPV6Support(t *testing.T) {

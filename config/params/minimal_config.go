@@ -37,6 +37,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	// Time parameters
 	minimalConfig.SecondsPerSlot = 4 // align with mainnet config
+	minimalConfig.UpSecondsPerSlot = 4
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.CleanWithdrawalsAftEpochs = 100

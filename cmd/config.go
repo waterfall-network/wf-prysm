@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/urfave/cli/v2"
 	fieldparams "gitlab.waterfall.network/waterfall/protocol/coordinator/config/fieldparams"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
@@ -56,6 +57,32 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	cfg := newConfig(ctx)
 	Init(cfg)
+}
+
+// ConfigureForkSlots overrides the params of the slot duration fork by the cli flags.
+// They must be kept in sync with the gwat ones, otherwise the nodes calculate different
+// slots for the same time.
+func ConfigureForkSlots(cliCtx *cli.Context) {
+	forkSlotIsSet := cliCtx.IsSet(UpSecondsPerSlotForkSlot.Name)
+	secondsIsSet := cliCtx.IsSet(UpSecondsPerSlot.Name)
+	if !forkSlotIsSet && !secondsIsSet {
+		return
+	}
+	c := params.BeaconConfig()
+	if forkSlotIsSet {
+		c.UpSecondsPerSlotForkSlot = types.Slot(cliCtx.Uint64(UpSecondsPerSlotForkSlot.Name))
+	}
+	if secondsIsSet {
+		c.UpSecondsPerSlot = cliCtx.Uint64(UpSecondsPerSlot.Name)
+	}
+	params.OverrideBeaconConfig(c)
+	if c.UpSecondsPerSlot == 0 {
+		log.Warnf("Slot duration fork is disabled by zero %s: slot duration stays %d seconds",
+			UpSecondsPerSlot.Name, c.SecondsPerSlot)
+		return
+	}
+	log.Warnf("Slot duration fork is set to slot %d with %d seconds per slot: the same values must be set for gwat",
+		c.UpSecondsPerSlotForkSlot, c.UpSecondsPerSlot)
 }
 
 func newConfig(ctx *cli.Context) *Flags {

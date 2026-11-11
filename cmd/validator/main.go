@@ -80,6 +80,8 @@ var appFlags = []cli.Flag{
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.PrevotingDisableFlag,
+	cmd.UpSecondsPerSlotForkSlot,
+	cmd.UpSecondsPerSlot,
 	cmd.MonitoringHostFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,

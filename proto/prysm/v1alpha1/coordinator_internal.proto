@@ -85,9 +85,12 @@ message FinalizationParamsResponse {
 // SubmitFinalizationResultRequest carries the outcome of ExecutionDagFinalize.
 // The coordinator uses result_cp_* to determine whether to use the original
 // param_checkpoint or look up a different beacon state for the new checkpoint.
+// A non-empty error reports a failed ExecutionDagFinalize: the coordinator then
+// resynchronizes gwat and ignores the result fields.
 message SubmitFinalizationResultRequest {
     bytes                  lf_spine         = 1;  // 32 bytes; empty if nil
     uint64                 result_cp_epoch  = 2;
     bytes                  result_cp_root   = 3;  // 32 bytes; empty if nil
     FinalizationCheckpoint param_checkpoint = 4;  // original checkpoint from params
+    string                 error            = 5;  // ExecutionDagFinalize error; empty on success
 }

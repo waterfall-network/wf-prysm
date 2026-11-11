@@ -43,6 +43,10 @@ var log = logrus.WithField("prefix", "coordinator-internal")
 type DagFinalizationFetcher interface {
 	CollectFinalizationParams(ctx context.Context, headState state.BeaconState, syncMode gwatTypes.SyncMode) (*gwatTypes.FinalizationParams, error)
 	CacheGwatCoordinatedState(cp *gwatTypes.Checkpoint)
+	// IsGwatSynced reports whether gwat is synchronized and can finalize new heads.
+	IsGwatSynced() bool
+	// ResyncGwat restarts gwat synchronization after a failed head finalization.
+	ResyncGwat()
 }
 
 // Server implements eth.CoordinatorInternalServer for the iguazu-coordinator sidecar.
@@ -55,38 +59,78 @@ type Server struct {
 	DagFinalizer  DagFinalizationFetcher
 }
 
-// StreamNewHeads streams a NewHeadEvent for every canonical head advancement.
+// StreamNewHeads streams a NewHeadEvent when the canonical head advances.
 // The sidecar subscribes once on startup and drives its dag-finalization loop
 // from the events it receives.
+//
+// The state feed blocks its sender until every subscriber takes the event, and
+// block processing is such a sender. stream.Send blocks while the client does not
+// read, so the feed is drained by a separate goroutine that never waits on the
+// client. Only the latest head matters to the sidecar: a newer head replaces a head
+// that is not sent yet.
 func (s *Server) StreamNewHeads(_ *emptypb.Empty, stream eth.CoordinatorInternal_StreamNewHeadsServer) error {
+	ctx, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+
 	stateCh := make(chan *feed.Event, 1)
 	sub := s.StateNotifier.StateFeed().Subscribe(stateCh)
 	defer sub.Unsubscribe()
 
+	heads := make(chan *eth.NewHeadEvent, 1)
+	subErr := make(chan error, 1)
+	go func() {
+		for {
+			select {
+			case event := <-stateCh:
+				head := newHeadEvent(event)
+				if head == nil {
+					continue
+				}
+				// Only this goroutine writes to heads, so the send below never blocks.
+				select {
+				case <-heads:
+				default:
+				}
+				heads <- head
+			case err := <-sub.Err():
+				subErr <- err
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
-		case event := <-stateCh:
-			if event.Type != statefeed.NewHead {
-				continue
-			}
-			head, ok := event.Data.(*ethpbv1.EventHead)
-			if !ok {
-				continue
-			}
-			if err := stream.Send(&eth.NewHeadEvent{
-				Slot:      uint64(head.GetSlot()),
-				BlockRoot: head.GetBlock(),
-				StateRoot: head.GetState(),
-			}); err != nil {
+		case head := <-heads:
+			if err := stream.Send(head); err != nil {
 				return status.Errorf(codes.Unavailable, "StreamNewHeads: send failed: %v", err)
 			}
-		case err := <-sub.Err():
+		case err := <-subErr:
 			return status.Errorf(codes.Aborted, "StreamNewHeads: subscription error: %v", err)
 		case <-s.Ctx.Done():
 			return status.Error(codes.Canceled, "server context canceled")
-		case <-stream.Context().Done():
+		case <-ctx.Done():
 			return status.Error(codes.Canceled, "client disconnected")
 		}
+	}
+}
+
+// newHeadEvent converts a state feed NewHead event to the stream message. It
+// returns nil for other events.
+func newHeadEvent(event *feed.Event) *eth.NewHeadEvent {
+	if event == nil || event.Type != statefeed.NewHead {
+		return nil
+	}
+	head, ok := event.Data.(*ethpbv1.EventHead)
+	if !ok {
+		return nil
+	}
+	return &eth.NewHeadEvent{
+		Slot:      uint64(head.GetSlot()),
+		BlockRoot: head.GetBlock(),
+		StateRoot: head.GetState(),
 	}
 }
 
@@ -95,6 +139,11 @@ func (s *Server) StreamNewHeads(_ *emptypb.Empty, stream eth.CoordinatorInternal
 func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinalizationParamsRequest) (*eth.FinalizationParamsResponse, error) {
 	if len(req.GetBlockRoot()) != 32 {
 		return nil, status.Error(codes.InvalidArgument, "block_root must be 32 bytes")
+	}
+	// While gwat is synchronized by the beacon node, a head checkpoint may refer to
+	// spines gwat does not have yet. The sidecar retries later.
+	if !s.DagFinalizer.IsGwatSynced() {
+		return nil, status.Error(codes.Unavailable, "gwat synchronization is in progress")
 	}
 	blockRoot := bytesutil.ToBytes32(req.GetBlockRoot())
 	syncMode := gwatTypes.SyncMode(req.GetSyncMode())
@@ -120,8 +169,16 @@ func (s *Server) GetFinalizationParams(ctx context.Context, req *eth.GetFinaliza
 }
 
 // SubmitFinalizationResult receives the outcome of gwat ExecutionDagFinalize
-// from the sidecar and caches the resulting gwat coordinated checkpoint.
+// from the sidecar and caches the resulting gwat coordinated checkpoint. A
+// reported failure restarts gwat synchronization instead.
 func (s *Server) SubmitFinalizationResult(ctx context.Context, req *eth.SubmitFinalizationResultRequest) (*emptypb.Empty, error) {
+	// A failed head finalization means gwat is behind or diverged: synchronize it again.
+	if req.GetError() != "" {
+		log.WithField("error", req.GetError()).Warn("SubmitFinalizationResult: dag finalization failed, resyncing gwat")
+		s.DagFinalizer.ResyncGwat()
+		return &emptypb.Empty{}, nil
+	}
+
 	paramCp := req.GetParamCheckpoint()
 	if paramCp == nil {
 		return nil, status.Error(codes.InvalidArgument, "param_checkpoint is required")

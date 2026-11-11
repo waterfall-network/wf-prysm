@@ -28,6 +28,7 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
+	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -515,7 +516,15 @@ func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValid
 
 // epochToTimestamp converts an epoch number to a timestamp.
 func (is *infostream) epochToTimestamp(epoch types.Epoch) uint64 {
-	return is.genesisTime + params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)))
+	startSlot, err := slots.EpochStart(epoch)
+	if err != nil {
+		return is.genesisTime
+	}
+	timestamp, err := slots.SlotStartTimestamp(is.genesisTime, startSlot)
+	if err != nil {
+		return is.genesisTime
+	}
+	return timestamp
 }
 
 // depositQueueTimestamp calculates the timestamp for exit of the validator from the deposit queue.

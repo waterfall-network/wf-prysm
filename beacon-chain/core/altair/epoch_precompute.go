@@ -324,7 +324,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	inactivityDenominator := bias * cfg.InactivityPenaltyQuotientAltair
 
 	for i, v := range vals {
-		rewards[i], penalties[i], err = attestationDelta(bal, v, inactivityDenominator, leak, numOfVals, activeValidatorsForSlot)
+		rewards[i], penalties[i], err = attestationDelta(bal, v, inactivityDenominator, leak, beaconState.Slot(), numOfVals, activeValidatorsForSlot)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -338,6 +338,7 @@ func attestationDelta(
 	val *precompute.Validator,
 	inactivityDenominator uint64,
 	inactivityLeak bool,
+	slot types.Slot,
 	validatorsNum int,
 	activeValidatorsFroSlot uint64,
 ) (reward, penalty uint64, err error) {
@@ -349,7 +350,7 @@ func attestationDelta(
 
 	cfg := params.BeaconConfig()
 	effectiveBalance := val.CurrentEpochEffectiveBalance
-	baseReward := CalculateBaseReward(cfg, validatorsNum, activeValidatorsFroSlot, cfg.BaseRewardMultiplier)
+	baseReward := CalculateBaseReward(cfg, slot, validatorsNum, activeValidatorsFroSlot, cfg.BaseRewardMultiplier)
 
 	weightDenominator := cfg.WeightDenominator
 	srcWeight := cfg.DAGTimelySourceWeight

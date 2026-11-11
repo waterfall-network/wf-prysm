@@ -65,12 +65,17 @@ func BaseRewardPerIncrement(activeBalance uint64) (uint64, error) {
 
 // CalculateBaseReward calculates the base reward value
 // for further calculation of amounts validators rewards and penalties.
-func CalculateBaseReward(config *params.BeaconChainConfig, validatorsNum int, activeValidatorsForSlot uint64, rewardMultiplier float64) uint64 {
+// The base reward is scaled by the duration of the given slot, so the annualized
+// emission stays the same on both sides of the UpSecondsPerSlotForkSlot fork.
+func CalculateBaseReward(config *params.BeaconChainConfig, slot types.Slot, validatorsNum int, activeValidatorsForSlot uint64, rewardMultiplier float64) uint64 {
 	var (
 		secondsInYear = 60 * 60 * 24 * 365.25 // Number of seconds in year
 	)
 
-	numOfSlotsPerYear := secondsInYear / float64(config.SecondsPerSlot) // Bi-th in formula
+	// The slot duration changes at the UpSecondsPerSlotForkSlot fork, so the number of slots per
+	// year is derived from the duration of the given slot. Otherwise the emission per unit of time
+	// would scale with the slot rate and break the MaxAnnualizedReturnRate target.
+	numOfSlotsPerYear := secondsInYear / float64(config.GetSecondsPerSlot(slot)) // Bi-th in formula
 	annualMintedCoins := config.MaxAnnualizedReturnRate *
 		float64(config.MaxEffectiveBalance) *
 		stdmath.Sqrt(float64(uint64(validatorsNum)*config.OptValidatorsNum)) // v in formula

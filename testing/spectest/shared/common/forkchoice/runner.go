@@ -16,7 +16,6 @@ import (
 	v2 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/v2"
 	v3 "gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state/v3"
 	fieldparams "gitlab.waterfall.network/waterfall/protocol/coordinator/config/fieldparams"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1/block"
@@ -82,8 +81,8 @@ func Run(t *testing.T, config string, fork int) {
 						newTick := int64(*step.Tick)
 						service.SetGenesisTime(time.Unix(time.Now().Unix()-newTick, 0))
 						if newTick > lastTick {
-							slot := uint64(newTick) / params.BeaconConfig().SecondsPerSlot
-							require.NoError(t, service.NewSlot(ctx, types.Slot(slot)))
+							slot := slots.SlotByTimestamp(0, uint64(newTick))
+							require.NoError(t, service.NewSlot(ctx, slot))
 							lastTick = newTick
 						}
 					}
@@ -106,11 +105,13 @@ func Run(t *testing.T, config string, fork int) {
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
 						slotsSinceGenesis := slots.SinceGenesis(service.GenesisTime())
+						lastTickSlotStart, err := slots.SlotStartTimestamp(0, slots.SlotByTimestamp(0, uint64(lastTick)))
+						require.NoError(t, err)
 						args := &forkchoicetypes.ProposerBoostRootArgs{
 							BlockRoot:       r,
 							BlockSlot:       beaconBlock.Block().Slot(),
 							CurrentSlot:     slotsSinceGenesis,
-							SecondsIntoSlot: uint64(lastTick) % params.BeaconConfig().SecondsPerSlot,
+							SecondsIntoSlot: uint64(lastTick) - lastTickSlotStart,
 						}
 						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, args))
 						if step.Valid != nil && !*step.Valid {

@@ -79,7 +79,7 @@ func (v *validator) LogNextDutyTimeLeft(slot types.Slot) error {
 		}
 		timeLeft := time.Duration(nextDutyTime.Unix() - prysmTime.Now().Unix()).Nanoseconds()
 		// There is not much value to log if time left is less than one slot.
-		if uint64(timeLeft) >= params.BeaconConfig().SecondsPerSlot {
+		if uint64(timeLeft) >= slots.SecondsPerSlot(nextDutySlot) {
 			log.WithFields(
 				logrus.Fields{
 					"currentSlot": slot,

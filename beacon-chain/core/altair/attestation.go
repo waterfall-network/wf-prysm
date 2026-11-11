@@ -241,7 +241,7 @@ func EpochParticipation(
 	if err != nil || activeValidatorsForSlot == 0 {
 		activeValidatorsForSlot = cfg.MaxCommitteesPerSlot * cfg.TargetCommitteeSize
 	}
-	baseReward := CalculateBaseReward(cfg, numOfValidators, activeValidatorsForSlot, cfg.BaseRewardMultiplier)
+	baseReward := CalculateBaseReward(cfg, beaconState.Slot(), numOfValidators, activeValidatorsForSlot, cfg.BaseRewardMultiplier)
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex

@@ -193,7 +193,7 @@ func ValidateAttestationTime(attSlot types.Slot, genesisTime time.Time, clockDis
 func VerifyCheckpointEpoch(c *ethpb.Checkpoint, genesis time.Time) bool {
 	now := uint64(prysmTime.Now().Unix())
 	genesisTime := uint64(genesis.Unix())
-	currentSlot := types.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
+	currentSlot := slots.SlotByTimestamp(genesisTime, now)
 	currentEpoch := slots.ToEpoch(currentSlot)
 
 	var prevEpoch types.Epoch

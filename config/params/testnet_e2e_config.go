@@ -33,6 +33,7 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 10
+	e2eConfig.UpSecondsPerSlot = 10
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.CleanWithdrawalsAftEpochs = 100
 	e2eConfig.SqrRootSlotsPerEpoch = 2

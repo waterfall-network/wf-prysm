@@ -45,6 +45,8 @@ var _ runtime.Service = (*Service)(nil)
 var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
+// Housekeeping cadence, fixed at process start. It stays on the pre-fork slot duration
+// after UpSecondsPerSlotForkSlot, which only makes it fire less often per slot.
 var refreshRate = slots.DivideSlotBy(2)
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.

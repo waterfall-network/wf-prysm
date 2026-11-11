@@ -26,6 +26,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Housekeeping cadence, fixed at process start. It stays on the pre-fork slot duration
+// after UpSecondsPerSlotForkSlot, which only makes it fire less often per slot.
 var processPendingBlocksPeriod = slots.DivideSlotBy(3 /* times per slot */)
 
 const maxPeerRequest = 50

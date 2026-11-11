@@ -140,8 +140,8 @@ func (c *PrevoteCache) GetPrevoteBySlot(ctx context.Context, slot types.Slot) []
 
 // PurgeOutdatedPrevote removes unactual votes by slot.
 func (c *PrevoteCache) PurgeOutdatedPrevote(curSlot types.Slot) error {
-	c.prevoteCacheLock.RLock()
-	defer c.prevoteCacheLock.RUnlock()
+	c.prevoteCacheLock.Lock()
+	defer c.prevoteCacheLock.Unlock()
 
 	logrus.WithFields(logrus.Fields{
 		"len(cache)": len(c.prevoteCache),

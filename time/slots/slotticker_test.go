@@ -40,7 +40,7 @@ func TestSlotTicker(t *testing.T) {
 	// Make this a buffered channel to prevent a deadlock since
 	// the other goroutine calls a function in this goroutine.
 	tick = make(chan time.Time, 2)
-	ticker.start(genesisTime, secondsPerSlot, since, until, after)
+	ticker.start(genesisTime, 0, secondsPerSlot, since, until, after)
 
 	// Tick once.
 	tick <- time.Now()
@@ -95,7 +95,7 @@ func TestSlotTickerGenesis(t *testing.T) {
 	// Make this a buffered channel to prevent a deadlock since
 	// the other goroutine calls a function in this goroutine.
 	tick = make(chan time.Time, 2)
-	ticker.start(genesisTime, secondsPerSlot, since, until, after)
+	ticker.start(genesisTime, 0, secondsPerSlot, since, until, after)
 
 	// Tick once.
 	tick <- time.Now()
