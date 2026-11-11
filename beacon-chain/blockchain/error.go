@@ -1,6 +1,10 @@
 package blockchain
 
-import "github.com/pkg/errors"
+import (
+	"context"
+
+	"github.com/pkg/errors"
+)
 
 var (
 	// errNilJustifiedInStore is returned when a nil justified checkpt is returned from store.
@@ -23,3 +27,29 @@ var (
 	//errNoOptSpines
 	errNoOptSpines = errors.New("no optimistic spines")
 )
+
+// invalidBlockError marks an error caused by the block content itself,
+// as opposed to a node-side failure (timeout, missing state, db or gwat errors).
+type invalidBlockError struct {
+	error
+}
+
+func (e invalidBlockError) Unwrap() error {
+	return e.error
+}
+
+// invalidBlock wraps err as a block validity failure, unless it is a context cancellation.
+func invalidBlock(err error) error {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return invalidBlockError{error: err}
+}
+
+// IsInvalidBlock returns true if the block was rejected because of its content.
+// Only such blocks have to be marked as bad: a node-side failure must not
+// cut off the block and all its descendants until the node restart.
+func IsInvalidBlock(err error) bool {
+	var e invalidBlockError
+	return errors.As(err, &e)
+}

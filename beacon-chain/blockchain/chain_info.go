@@ -199,6 +199,18 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
 }
 
+// HeadStateByRoot returns a copy of the head state if root is the current head block root,
+// and nil otherwise.
+func (s *Service) HeadStateByRoot(root [32]byte) state.BeaconState {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	if !s.hasHeadState() || s.head.root != root {
+		return nil
+	}
+	return s.head.state.Copy()
+}
+
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
 	s.headLock.RLock()

@@ -469,6 +469,52 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
 
+func TestLastAncestorState_CanGetUsingReplayCache(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
+
+	b0 := util.NewBeaconBlock()
+	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r0, err := b0.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
+	r2, err := b2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b3 := util.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
+	r3, err := b3.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	b1State, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, b1State.SetSlot(1))
+	b2State, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, b2State.SetSlot(2))
+
+	for _, b := range []*ethpb.SignedBeaconBlock{b0, b1, b2, b3} {
+		wsb, wrapErr := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, wrapErr)
+		require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	}
+	require.NoError(t, service.beaconDB.SaveState(ctx, b1State, r1))
+	require.NoError(t, service.loadStateCache.Put(ctx, r2, b2State))
+
+	// The replayed state of the parent is preferred over an older saved state.
+	lastState, err := service.LastAncestorState(ctx, r3)
+	require.NoError(t, err)
+	assert.Equal(t, b2State.Slot(), lastState.Slot(), "Did not get wanted state")
+}
+
 func TestState_HasState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)

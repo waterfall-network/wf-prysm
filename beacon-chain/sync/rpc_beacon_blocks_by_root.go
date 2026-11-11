@@ -62,6 +62,14 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	s.rateLimiter.add(stream, int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
+		// the processed block can be in the chain's blocks cache, not yet written to the DB.
+		// Check the cache first: a block is removed from the cache only after it is written to the DB.
+		if blk := s.cfg.chain.CachedBlock(root); blk != nil && !blk.IsNil() {
+			if err := s.chunkBlockWriter(stream, blk); err != nil {
+				return err
+			}
+			continue
+		}
 		blk, err := s.cfg.beaconDB.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch block")

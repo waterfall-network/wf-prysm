@@ -80,10 +80,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 		return err
 	}
 	if !has {
-		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		if err := s.flushCachedBlocks(ctx); err != nil {
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
-		s.clearInitSyncBlocks()
 	}
 	return nil
 }
@@ -240,10 +239,9 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+	if err := s.flushCachedBlocks(ctx); err != nil {
 		return err
 	}
-	s.clearInitSyncBlocks()
 
 	if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
@@ -473,11 +471,11 @@ func (s *Service) verifyBlkSyncOps(ctx context.Context, block block.BeaconBlock,
 	//1. Validate by op pool: if is valide - break.
 	notFoundOpsWth, err := s.verifyWithdrawalsInPool(block)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	notFoundOpsExit, err := s.verifyExitsInPool(block)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	if len(notFoundOpsWth) == 0 && len(notFoundOpsExit) == 0 {
 		return nil
@@ -486,12 +484,15 @@ func (s *Service) verifyBlkSyncOps(ctx context.Context, block block.BeaconBlock,
 	// 2. Validate by parent state: if parentState contains SyncOp - block is invalid.
 	err = s.checkAnyWithdrawalsInParentState(preState, notFoundOpsWth)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
 	err = s.checkAnyExitsInParentState(preState, notFoundOpsExit)
 	if err != nil {
-		return err
+		return invalidBlock(err)
 	}
+
+	// 3. Not found by the node itself (pool or leaves states) is not proof of an invalid block:
+	// the node may lag behind gwat or other forks, so the error below is not marked as invalid.
 
 	//3. Validate by leaves' states: if any state of leaves contains SyncOp - block is valid.
 	roots, slots := s.ForkChoicer().Tips()

@@ -36,6 +36,10 @@ const (
 	noRequiredPeersErrRefreshInterval = 15 * time.Second
 	// maxResetAttempts number of times stale FSM is reset, before backtracking is triggered.
 	maxResetAttempts = 4
+	// maxForkSearchFailures number of consecutive failed fork searches, after which FSMs are reset
+	// to the finalized checkpoint (allows to recover from orphaned branch that diverged deeper than
+	// backtracking can reach).
+	maxForkSearchFailures = 2
 	// startBackSlots defines number of slots before the current head, which defines a start position
 	// of the initial machine. This allows more robustness in case of normal sync sets head to some
 	// orphaned block: in that case starting earlier and re-fetching blocks allows to reorganize chain.
@@ -78,6 +82,7 @@ type blocksQueue struct {
 	chain               blockchainService
 	highestExpectedSlot types.Slot
 	mode                syncMode
+	forkSearchFailures  uint8 // consecutive failed attempts to find alternative branch
 	exitConditions      struct {
 		noRequiredPeersErrRetries int
 	}
@@ -426,12 +431,28 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 				delete(q.staleEpochs, slots.ToEpoch(startSlot))
 				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
 				if err == nil {
+					q.forkSearchFailures = 0
 					return stateSkipped, q.resetFromFork(ctx, fork)
 				}
 				log.WithFields(logrus.Fields{
 					"epoch": slots.ToEpoch(startSlot),
 					"error": err.Error(),
 				}).Debug("Can not explore alternative branches")
+
+				// Head may be on orphaned branch that diverged deeper than backtracking can reach:
+				// re-sync from the finalized checkpoint, so that canonical branch gets connected
+				// to the common ancestor (already known blocks are filtered out on processing).
+				q.forkSearchFailures++
+				if q.forkSearchFailures >= maxForkSearchFailures {
+					q.forkSearchFailures = 0
+					if restartSlot, ok := q.finalizedRestartSlot(startSlot); ok {
+						log.WithFields(logrus.Fields{
+							"headSlot":    q.chain.HeadSlot(),
+							"restartSlot": restartSlot,
+						}).Info("Head is stuck on orphaned branch, re-syncing from finalized checkpoint")
+						return stateSkipped, q.resetFromSlot(ctx, restartSlot)
+					}
+				}
 			}
 		}
 		return stateSkipped, q.resetFromSlot(ctx, startSlot)

@@ -98,7 +98,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
-			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
+			// the processed block can be in the chain's blocks cache, not yet written to the DB.
+			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot) || s.cfg.chain.HasInitSyncBlock(blkRoot)
 			// No need to process the same block twice.
 			if inDB {
 				s.pendingQueueLock.Lock()
@@ -134,7 +135,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, parentRoot) || s.cfg.chain.HasInitSyncBlock(parentRoot)
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
@@ -168,8 +170,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
 				if errors.Is(err, blockchain.ErrBlockIsProcessing) ||
 					errors.Is(err, powchain.ErrHTTPTimeout) {
 					span.End()
@@ -177,7 +177,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				}
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 				tracing.AnnotateError(span, err)
-				s.setBadBlock(ctx, blkRoot)
+				// An invalid block is marked as bad and removed from the queue in the next iteration;
+				// after a node-side failure the block stays in the queue for the next try.
+				if blockchain.IsInvalidBlock(err) {
+					s.setBadBlock(ctx, blkRoot)
+				}
 				span.End()
 				continue
 			}

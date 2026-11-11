@@ -149,7 +149,7 @@ func (s *Service) processFetchedDataRegSync(
 				log.WithError(err).WithFields(logrus.Fields{
 					"slot":       blk.Block().Slot(),
 					"ParentRoot": fmt.Sprintf("%#x", blk.Block().ParentRoot()),
-				}).Error("Block is not processed")
+				}).Debug("Block is not processed")
 				invalidBlocks++
 			case errors.Is(err, errParentDoesNotExist):
 				log.WithError(err).WithFields(logrus.Fields{

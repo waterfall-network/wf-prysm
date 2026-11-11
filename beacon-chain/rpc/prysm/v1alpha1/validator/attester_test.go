@@ -79,6 +79,72 @@ func TestProposeAttestation_OK(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// countingChainService counts head validator index lookups.
+type countingChainService struct {
+	*mock.ChainService
+	calls int
+}
+
+func (s *countingChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+	s.calls++
+	return s.ChainService.HeadValidatorsIndices(ctx, epoch)
+}
+
+func TestProposeAttestation_ActiveValidatorCountCached(t *testing.T) {
+	validators := make([]*ethpb.Validator, 64)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey:             make([]byte, 48),
+			CreatorAddress:        make([]byte, 20),
+			WithdrawalCredentials: make([]byte, 20),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+			ActivationHash:        make([]byte, 32),
+			ExitHash:              make([]byte, 32),
+			WithdrawalOps:         make([]*ethpb.WithdrawalOp, 0),
+		}
+	}
+	state, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, state.SetValidators(validators))
+
+	chain := &countingChainService{ChainService: &mock.ChainService{State: state}}
+	broadcaster := &mockp2p.MockBroadcaster{}
+	attesterServer := &Server{
+		HeadFetcher:       chain,
+		P2P:               broadcaster,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+	}
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := sk.Sign([]byte("dummy_test_data"))
+	attAt := func(slot types.Slot) *ethpb.Attestation {
+		return util.HydrateAttestation(&ethpb.Attestation{
+			Signature: sig.Marshal(),
+			Data:      &ethpb.AttestationData{Slot: slot},
+		})
+	}
+
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	_, err = attesterServer.ProposeAttestation(context.Background(), attAt(slotsPerEpoch))
+	require.NoError(t, err)
+	_, err = attesterServer.ProposeAttestation(context.Background(), attAt(slotsPerEpoch+1))
+	require.NoError(t, err)
+	assert.Equal(t, 1, chain.calls, "lookup within one epoch")
+
+	_, err = attesterServer.ProposeAttestation(context.Background(), attAt(2*slotsPerEpoch))
+	require.NoError(t, err)
+	assert.Equal(t, 2, chain.calls, "lookup in the next epoch")
+	assert.Equal(t, 3, len(broadcaster.BroadcastAttestations))
+
+	count, err := attesterServer.activeValidatorCount(context.Background(), 2)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(len(validators)), count)
+}
+
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},

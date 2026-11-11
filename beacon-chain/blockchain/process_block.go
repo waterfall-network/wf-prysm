@@ -155,6 +155,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error: invalid sync operation")
+		// verifyBlkSyncOps marks only the content failures as invalid block
 		return err
 	}
 
@@ -163,7 +164,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
 		}).Error("onBlock error")
-		return err
+		return invalidBlock(err)
 	}
 
 	//validate limitation of all spines count
@@ -174,7 +175,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			"spinesCount":    spinesCount,
 			"AllSpinesLimit": params.BeaconConfig().AllSpinesLimit,
 		}).Error("onBlock error")
-		return err
+		return invalidBlock(err)
 	}
 
 	log.WithError(err).WithFields(logrus.Fields{
@@ -314,7 +315,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	headBlock, err := s.getBlock(ctx, headRoot)
 	if err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"block.slot": signed.Block().Slot(),
@@ -609,9 +610,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 // BatchHandlerBlockInfoFetcherFunc provides access to blocks info
 // including stored in db over context for state transition while initial-sync.
 func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.SignedBeaconBlock, blockRoots [][32]byte) params.CtxBlockFetcher {
+	fromDB := db.BlockInfoFetcherFunc(dbRo)
 	return func(ctx context.Context, blockRoot [32]byte) (types.ValidatorIndex, types.Slot, uint64, error) {
 		var blk block.SignedBeaconBlock
-		var err error
 
 		for i, root := range blockRoots {
 			if blockRoot == root {
@@ -621,13 +622,7 @@ func BatchHandlerBlockInfoFetcherFunc(dbRo db.ReadOnlyDatabase, blks []block.Sig
 		}
 		// if not found in batch
 		if blk == nil {
-			blk, err = dbRo.Block(ctx, blockRoot)
-			if err != nil {
-				return 0, 0, 0, err
-			}
-		}
-		if blk == nil {
-			return 0, 0, 0, db.ErrNotFound
+			return fromDB(ctx, blockRoot)
 		}
 
 		votesIncluded := uint64(0)
@@ -652,10 +647,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
-		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		if err := s.flushCachedBlocks(ctx); err != nil {
 			return err
 		}
-		s.clearInitSyncBlocks()
 	}
 
 	justified := s.store.JustifiedCheckpt()
@@ -796,10 +790,13 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}).Info("onBlock: savePostStateInfo 000")
 	tstart := time.Now()
 
-	if initSync {
-		s.saveInitSyncBlock(r, b)
-	} else if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
+	// The block is written to the DB by the background flusher to keep the disk write
+	// out of the head update path. Until then, it's available via getBlock / hasBlockInInitSyncOrDB.
+	s.saveInitSyncBlock(r, b)
+	if !initSync {
+		if err := s.requestBlocksFlush(ctx); err != nil {
+			return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
+		}
 	}
 
 	log.WithFields(logrus.Fields{

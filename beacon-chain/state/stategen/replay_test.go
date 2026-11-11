@@ -332,6 +332,42 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	}
 }
 
+func TestLoadBlocks_SameEndSlotsOnly(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: beaconDB,
+	}
+
+	// Two siblings on slot 2 with the same parent at slot 0.
+	parentRoot := bytesutil.PadTo([]byte{'A'}, 32)
+	roots := make([][32]byte, 0, 2)
+	savedBlocks := make([]*ethpb.SignedBeaconBlock, 0, 2)
+	for _, sr := range []byte{'A', 'B'} {
+		b := util.NewBeaconBlock()
+		b.Block.Slot = 2
+		b.Block.ParentRoot = parentRoot
+		b.Block.StateRoot = bytesutil.PadTo([]byte{sr}, 32)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+		roots = append(roots, r)
+		savedBlocks = append(savedBlocks, b)
+	}
+
+	// Only the siblings on the end slot are in range; either of them can be the end block.
+	for i := range roots {
+		filteredBlocks, err := s.LoadBlocks(ctx, 1, 2, roots[i])
+		require.NoError(t, err)
+		require.Equal(t, 1, len(filteredBlocks))
+		if !proto.Equal(savedBlocks[i], filteredBlocks[0].Proto()) {
+			t.Errorf("Did not get wanted block %d", i)
+		}
+	}
+}
+
 func TestLoadBlocks_BadStart(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()

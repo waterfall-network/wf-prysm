@@ -405,23 +405,29 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
-	var best []byte
+	var best [32]byte
+	var found bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blockSlotIndicesBucket)
-		// Iterate through the index, which is in byte sorted order.
+		// The index is in byte sorted order, so walk backwards from the first key >= slot.
 		c := bkt.Cursor()
-		for s, root := c.First(); s != nil; s, root = c.Next() {
+		var s, root []byte
+		if k, _ := c.Seek(bytesutil.SlotToBytesBigEndian(slot)); k == nil {
+			s, root = c.Last()
+		} else {
+			s, root = c.Prev()
+		}
+		for ; s != nil; s, root = c.Prev() {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			key := bytesutil.BytesToSlotBigEndian(s)
-			if root == nil {
+			if root == nil || bytesutil.BytesToSlotBigEndian(s) >= slot {
 				continue
 			}
-			if key >= slot {
-				break
-			}
-			best = root
+			// Copy the root: bolt memory is only valid within the transaction.
+			copy(best[:], root)
+			found = true
+			break
 		}
 		return nil
 	}); err != nil {
@@ -430,8 +436,8 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 
 	var blk block.SignedBeaconBlock
 	var err error
-	if best != nil {
-		blk, err = s.Block(ctx, bytesutil.ToBytes32(best))
+	if found {
+		blk, err = s.Block(ctx, best)
 		if err != nil {
 			return nil, err
 		}

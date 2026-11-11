@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/sirupsen/logrus"
@@ -214,27 +215,26 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
 	}
 
-	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
-	// of a received unaggregated attestation.
-	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.UnaggregatedAttReceived,
-		Data: &operation.UnAggregatedAttReceivedData{
-			Attestation: att,
-		},
-	})
-
 	// Determine subnet to broadcast attestation to
-	wantedEpoch := slots.ToEpoch(att.Data.Slot)
-	vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+	activeVals, err := vs.activeValidatorCount(ctx, slots.ToEpoch(att.Data.Slot))
 	if err != nil {
 		return nil, err
 	}
-	subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
+	subnet := helpers.ComputeSubnetFromCommitteeAndSlot(activeVals, att.Data.CommitteeIndex, att.Data.Slot)
 
 	// Broadcast the new attestation to the network.
 	if err := vs.P2P.BroadcastAttestation(ctx, subnet, att); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
+
+	// Notify other services in the beacon node of a received unaggregated attestation. Feed.Send
+	// blocks until every subscriber takes the event, so it must not delay the broadcast above.
+	go vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.UnaggregatedAttReceived,
+		Data: &operation.UnAggregatedAttReceivedData{
+			Attestation: att,
+		},
+	})
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
@@ -248,6 +248,39 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	return &ethpb.AttestResponse{
 		AttestationDataRoot: root[:],
 	}, nil
+}
+
+// activeValsCount caches the active validator count of one epoch for attestation subnet computation.
+type activeValsCount struct {
+	mu    sync.Mutex
+	epoch types.Epoch
+	count uint64
+	ok    bool
+}
+
+// activeValidatorCount returns the number of active validators at the epoch. The count is constant
+// within an epoch, so it is computed once per epoch instead of taking the head lock on every
+// attestation: under head lock contention the validator RPC exceeded its deadline before broadcast.
+func (vs *Server) activeValidatorCount(ctx context.Context, epoch types.Epoch) (uint64, error) {
+	vs.activeVals.mu.Lock()
+	if vs.activeVals.ok && vs.activeVals.epoch == epoch {
+		count := vs.activeVals.count
+		vs.activeVals.mu.Unlock()
+		return count, nil
+	}
+	vs.activeVals.mu.Unlock()
+
+	vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, epoch)
+	if err != nil {
+		return 0, err
+	}
+	count := uint64(len(vals))
+	if count > 0 {
+		vs.activeVals.mu.Lock()
+		vs.activeVals.epoch, vs.activeVals.count, vs.activeVals.ok = epoch, count, true
+		vs.activeVals.mu.Unlock()
+	}
+	return count, nil
 }
 
 // SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
