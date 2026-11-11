@@ -327,7 +327,7 @@ func bytes() []byte {
 	}
 	for i := 0; i < 32; i++ {
 		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
+			b[i] = uint8(rand.Intn(255) + 1)
 		}
 	}
 	return b

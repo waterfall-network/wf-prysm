@@ -372,6 +372,7 @@ func TestFinalizationParamsToProto_RoundTrip(t *testing.T) {
 	txHash := gwatCommon.HexToHash("0x6666")
 	amount := big.NewInt(1000)
 	balance := big.NewInt(5000)
+	stakeAmount := big.NewInt(600)
 
 	fp := &gwatTypes.FinalizationParams{
 		Spines:    gwatCommon.HashArray{spine1, spine2},
@@ -393,6 +394,15 @@ func TestFinalizationParamsToProto_RoundTrip(t *testing.T) {
 				ActivationEpoch: 2,
 				ExitEpoch:       100,
 				Balance:         balance,
+				StakeAmount:     stakeAmount,
+			},
+			{
+				OpType:      gwatTypes.UpdateBalance,
+				Amount:      amount,
+				StakeAmount: big.NewInt(0),
+			},
+			{
+				OpType: gwatTypes.Activate,
 			},
 		},
 		SyncMode: gwatTypes.HeadSync,
@@ -413,7 +423,7 @@ func TestFinalizationParamsToProto_RoundTrip(t *testing.T) {
 	assert.Equal(t, cpRoot.Bytes(), cp.GetRoot())
 	assert.Equal(t, cpSpine.Bytes(), cp.GetSpine())
 
-	require.Len(t, proto.GetValSyncData(), 1)
+	require.Len(t, proto.GetValSyncData(), 3)
 	op := proto.GetValSyncData()[0]
 	assert.Equal(t, uint32(gwatTypes.UpdateBalance), op.GetOpType())
 	assert.Equal(t, uint64(5), op.GetProcEpoch())
@@ -424,6 +434,10 @@ func TestFinalizationParamsToProto_RoundTrip(t *testing.T) {
 	assert.Equal(t, uint64(2), op.GetActivationEpoch())
 	assert.Equal(t, uint64(100), op.GetExitEpoch())
 	assert.Equal(t, balance.Bytes(), op.GetBalanceWei())
+	assert.Equal(t, stakeAmount.Bytes(), op.GetStakeAmountWei())
+	// a zero stake amount must not be lost as nil
+	assert.Equal(t, []byte{0}, proto.GetValSyncData()[1].GetStakeAmountWei())
+	assert.Empty(t, proto.GetValSyncData()[2].GetStakeAmountWei())
 }
 
 func TestGetFinalizationParams_HeadStateFromMemory(t *testing.T) {
