@@ -273,7 +273,7 @@ func initLogRewardsAndPenalties(st state.BeaconState) error {
 
 	// Write the metadata params
 	writer := bufio.NewWriter(file)
-	_, err = fmt.Fprintf(writer, fmt.Sprintf(
+	_, err = fmt.Fprintf(writer,
 		"%d %s %d %d %f %d %d %d %s %s\n",
 		numberOfCoordinators,
 		MetaGlobalParams,
@@ -285,7 +285,7 @@ func initLogRewardsAndPenalties(st state.BeaconState) error {
 		-1,
 		"NOOP",
 		"-",
-	))
+	)
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			for pkg, path := range aliases {
 				for _, fn := range disallowedFns {
 					if isPkgDot(stmt.Fun, pkg, fn) {
-						pass.Reportf(node.Pos(), fmt.Sprintf(
+						pass.Reportf(node.Pos(), "%s", fmt.Sprintf(
 							"%s: %s.%s() (from %s)", errWeakCrypto.Error(), pkg, fn, path))
 					}
 				}

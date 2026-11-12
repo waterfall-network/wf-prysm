@@ -1,34 +1,55 @@
+version: "2"
 run:
-  skip-files:
-    - .*_test.go
-  skip-dirs:
-    - beacon-chain/powchain/testing
-    - beacon-chain/p2p/testing
-    - beacon-chain/blockchain/testing
-    - proto/
-    - contracts/
-    - testing/
-  timeout: 10m
-  go: '1.20'
-
+  go: "1.26"
 linters:
-  disable-all: true
+  default: none
+  enable:
+    - dupword
+    - errcheck
+    - gocognit
+    - misspell
+    - nilerr
+    - staticcheck
+    - unused
+    - whitespace
+  settings:
+    gocognit:
+      min-complexity: 65
+    misspell:
+      locale: US
+    staticcheck:
+      # golangci-lint v1 ran only gosimple; v2 merges it into staticcheck.
+      checks:
+        - S*
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - (^|/)third_party/
+      - (^|/)builtin/
+      - (^|/)examples/
+      # Kept from the v1 configuration (run.skip-files and run.skip-dirs).
+      - .*_test.go
+      - beacon-chain/powchain/testing
+      - beacon-chain/p2p/testing
+      - beacon-chain/blockchain/testing
+      - proto/
+      - contracts/
+      - testing/
+formatters:
   enable:
     - gofmt
     - goimports
-    - unused
-    - errcheck
-    - gosimple
-    - gocognit
-    - dupword
-    - nilerr
-    - whitespace
-    - misspell
-
-linters-settings:
-  golint:
-    min-confidence: 0
-  gocognit:
-    min-complexity: 65
-  misspell:
-    locale: US
+  exclusions:
+    generated: lax
+    paths:
+      - (^|/)third_party/
+      - (^|/)builtin/
+      - (^|/)examples/
+      - proto/
+      - contracts/
+      - testing/

@@ -260,7 +260,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpc.HTTPCodeMetadataKey: []string{"204"},
+				"Grpc-Metadata-" + grpc.HTTPCodeMetadataKey: []string{"200"},
 			},
 		}
 		container := defaultResponseContainer()
@@ -279,14 +279,14 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "102", v[0])
-		assert.Equal(t, 204, writer.Code)
+		assert.Equal(t, 200, writer.Code)
 		assert.DeepEqual(t, responseJSON, writer.Body.Bytes())
 	})
 
 	t.Run("GET_no_grpc_status_code_header", func(t *testing.T) {
 		response := &http.Response{
 			Header:     http.Header{},
-			StatusCode: 204,
+			StatusCode: 200,
 		}
 		container := defaultResponseContainer()
 		responseJSON, err := json.Marshal(container)
@@ -295,7 +295,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 
 		errJSON := WriteMiddlewareResponseHeadersAndBody(response, responseJSON, writer)
 		require.Equal(t, true, errJSON == nil)
-		assert.Equal(t, 204, writer.Code)
+		assert.Equal(t, 200, writer.Code)
 	})
 
 	t.Run("GET_invalid_status_code", func(t *testing.T) {
@@ -320,7 +320,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 	t.Run("POST", func(t *testing.T) {
 		response := &http.Response{
 			Header:     http.Header{},
-			StatusCode: 204,
+			StatusCode: 200,
 		}
 		container := defaultResponseContainer()
 		responseJSON, err := json.Marshal(container)
@@ -329,13 +329,13 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 
 		errJSON := WriteMiddlewareResponseHeadersAndBody(response, responseJSON, writer)
 		require.Equal(t, true, errJSON == nil)
-		assert.Equal(t, 204, writer.Code)
+		assert.Equal(t, 200, writer.Code)
 	})
 
 	t.Run("POST_with_response_body", func(t *testing.T) {
 		response := &http.Response{
 			Header:     http.Header{},
-			StatusCode: 204,
+			StatusCode: 200,
 		}
 		container := defaultResponseContainer()
 		responseJSON, err := json.Marshal(container)
@@ -345,7 +345,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 
 		errJSON := WriteMiddlewareResponseHeadersAndBody(response, responseJSON, writer)
 		require.Equal(t, true, errJSON == nil)
-		assert.Equal(t, 204, writer.Code)
+		assert.Equal(t, 200, writer.Code)
 		assert.DeepEqual(t, responseJSON, writer.Body.Bytes())
 	})
 

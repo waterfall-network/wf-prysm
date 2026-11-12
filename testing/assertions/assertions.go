@@ -296,7 +296,8 @@ func notEmpty(loggerFn assertionLoggerFn, obj interface{}, ignoreFieldsWithoutTa
 	}
 
 	for i := 0; i < v.NumField(); i++ {
-		if ignoreFieldsWithoutTags && len(v.Type().Field(i).Tag) == 0 {
+		// Newer protobuf tags the private state field (protogen:"open.v1"), so skip private fields by name too.
+		if ignoreFieldsWithoutTags && (len(v.Type().Field(i).Tag) == 0 || protobufPrivateFields[v.Type().Field(i).Name]) {
 			continue
 		}
 		fields := append(fields, v.Type().Field(i).Name)
