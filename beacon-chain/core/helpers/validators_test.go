@@ -781,3 +781,134 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 		}
 	}
 }
+
+func TestWithdrawalStakeAmount(t *testing.T) {
+	const gwei = uint64(1)
+	var (
+		ffe           = params.BeaconConfig().FarFutureEpoch
+		maxEffBalance = params.BeaconConfig().MaxEffectiveBalance
+		slotsPerEpoch = params.BeaconConfig().SlotsPerEpoch
+		opSlot        = 10 * slotsPerEpoch
+		opEpoch       = types.Epoch(10)
+	)
+	wop := func(amount uint64, slot types.Slot) *ethpb.WithdrawalOp {
+		return &ethpb.WithdrawalOp{Amount: amount, Hash: make([]byte, 32), Slot: slot}
+	}
+	tests := []struct {
+		name       string
+		validator  *ethpb.Validator
+		balance    uint64 // current balance
+		opIdx      int
+		wantAmount uint64
+	}{
+		{
+			name: "active validator: rewards only",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: 0,
+				ExitEpoch:                  ffe,
+				WithdrawalOps:              []*ethpb.WithdrawalOp{wop(500*gwei, opSlot)},
+			},
+			balance:    maxEffBalance + 100*gwei,
+			wantAmount: 0,
+		},
+		{
+			name: "exit initiated but not reached at op slot: rewards only",
+			validator: &ethpb.Validator{
+				ExitEpoch:     opEpoch + 1,
+				WithdrawalOps: []*ethpb.WithdrawalOp{wop(500*gwei, opSlot)},
+			},
+			balance:    maxEffBalance,
+			wantAmount: 0,
+		},
+		{
+			name: "deactivated: full withdrawal",
+			validator: &ethpb.Validator{
+				ExitEpoch:     opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{wop(maxEffBalance+100*gwei, opSlot)},
+			},
+			balance:    0,
+			wantAmount: maxEffBalance,
+		},
+		{
+			name: "deactivated: rewards and stake",
+			validator: &ethpb.Validator{
+				ExitEpoch:     opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{wop(500*gwei, opSlot)},
+			},
+			balance:    maxEffBalance + 100*gwei - 500*gwei,
+			wantAmount: 400 * gwei,
+		},
+		{
+			name: "deactivated: part of rewards",
+			validator: &ethpb.Validator{
+				ExitEpoch:     opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{wop(20*gwei, opSlot)},
+			},
+			balance:    maxEffBalance + 100*gwei - 20*gwei,
+			wantAmount: 0,
+		},
+		{
+			name: "deactivated: balance less than max effective balance",
+			validator: &ethpb.Validator{
+				ExitEpoch:     opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{wop(300*gwei, opSlot)},
+			},
+			balance:    maxEffBalance - 1000*gwei,
+			wantAmount: 300 * gwei,
+		},
+		{
+			name: "deactivated: subsequent ops are taken into account",
+			validator: &ethpb.Validator{
+				ExitEpoch: opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{
+					nil,
+					wop(80*gwei, opSlot),   // rewards 100 -> stake 0
+					wop(50*gwei, opSlot+1), // rewards 20 -> stake 30
+				},
+			},
+			balance:    maxEffBalance + 100*gwei - 130*gwei,
+			opIdx:      1,
+			wantAmount: 0,
+		},
+		{
+			name: "deactivated: subsequent op",
+			validator: &ethpb.Validator{
+				ExitEpoch: opEpoch,
+				WithdrawalOps: []*ethpb.WithdrawalOp{
+					nil,
+					wop(80*gwei, opSlot),
+					wop(50*gwei, opSlot+1),
+				},
+			},
+			balance:    maxEffBalance + 100*gwei - 130*gwei,
+			opIdx:      2,
+			wantAmount: 30 * gwei,
+		},
+		{
+			name: "refund of insufficient deposit: whole amount is stake",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: ffe,
+				ExitEpoch:                  ffe,
+				WithdrawalOps:              []*ethpb.WithdrawalOp{wop(1000*gwei, opSlot)},
+			},
+			balance:    0,
+			wantAmount: 1000 * gwei,
+		},
+		{
+			name:       "bad op index",
+			validator:  &ethpb.Validator{WithdrawalOps: []*ethpb.WithdrawalOp{wop(1000*gwei, opSlot)}},
+			opIdx:      1,
+			wantAmount: 0,
+		},
+		{
+			name:       "nil op",
+			validator:  &ethpb.Validator{WithdrawalOps: []*ethpb.WithdrawalOp{nil}},
+			wantAmount: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantAmount, WithdrawalStakeAmount(tt.validator, tt.balance, tt.opIdx))
+		})
+	}
+}

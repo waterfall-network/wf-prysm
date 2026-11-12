@@ -305,5 +305,12 @@ func validatorSyncOpToProto(op *gwatTypes.ValidatorSync) *eth.ValidatorSyncOp {
 	if op.Balance != nil {
 		proto.BalanceWei = op.Balance.Bytes()
 	}
+	if op.StakeAmount != nil {
+		// A zero stake amount is valid and differs from nil, so it is sent as a zero byte.
+		proto.StakeAmountWei = op.StakeAmount.Bytes()
+		if len(proto.StakeAmountWei) == 0 {
+			proto.StakeAmountWei = []byte{0}
+		}
+	}
 	return proto
 }

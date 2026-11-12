@@ -447,3 +447,40 @@ func AvailableWithdrawalAmount(vInderx types.ValidatorIndex, st state.ReadOnlyBe
 	}
 	return bal - params.BeaconConfig().MaxEffectiveBalance, nil
 }
+
+// WithdrawalStakeAmount returns the part of amount (in gwei) of the withdrawal operation
+// with index opIdx in validator.WithdrawalOps which is withdrawn from the stake
+// (the rest of amount is rewards). Rewards are withdrawn first.
+// The balance before the operation is restored from the current balance
+// and amounts of the operation and all subsequent ones.
+// It mirrors the rules of AvailableWithdrawalAmount at the slot of the operation.
+func WithdrawalStakeAmount(validator *ethpb.Validator, currentBalance uint64, opIdx int) uint64 {
+	if validator == nil || opIdx < 0 || opIdx >= len(validator.WithdrawalOps) || validator.WithdrawalOps[opIdx] == nil {
+		return 0
+	}
+	wop := validator.WithdrawalOps[opIdx]
+	balBefore := currentBalance
+	for _, w := range validator.WithdrawalOps[opIdx:] {
+		if w != nil {
+			balBefore += w.Amount
+		}
+	}
+	maxEffBalance := params.BeaconConfig().MaxEffectiveBalance
+
+	// refunds of insufficient deposit to activate validator
+	if validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch && balBefore < maxEffBalance {
+		return wop.Amount
+	}
+	// validator is not deactivated: rewards only are available
+	if validator.ExitEpoch > slots.ToEpoch(wop.Slot) {
+		return 0
+	}
+	var rewards uint64
+	if balBefore > maxEffBalance {
+		rewards = balBefore - maxEffBalance
+	}
+	if wop.Amount <= rewards {
+		return 0
+	}
+	return wop.Amount - rewards
+}

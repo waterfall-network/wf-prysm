@@ -669,17 +669,18 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 		}
 
 		// withdrawal
-		for _, wop := range validator.WithdrawalOps {
+		for i, wop := range validator.WithdrawalOps {
 			if wop.Slot < minSlot {
 				continue
+			}
+			currBalance, err := workState.BalanceAtIndex(types.ValidatorIndex(idx))
+			if err != nil {
+				return false, validator, err
 			}
 			balance := validator.EffectiveBalance
 			if validator.ExitEpoch <= workEpoch {
 				//if validator is deactivated
-				balance, err = workState.BalanceAtIndex(types.ValidatorIndex(idx))
-				if err != nil {
-					return false, validator, err
-				}
+				balance = currBalance
 			}
 			vsd := &gwatTypes.ValidatorSync{
 				OpType:          gwatTypes.UpdateBalance,
@@ -691,6 +692,7 @@ func (s *Service) collectValidatorSyncData(ctx context.Context, headState state.
 				Balance:         helpers.GweiToWei(balance),
 				ActivationEpoch: uint64(validator.ActivationEpoch),
 				ExitEpoch:       uint64(validator.ExitEpoch),
+				StakeAmount:     helpers.GweiToWei(helpers.WithdrawalStakeAmount(validator, currBalance, i)),
 			}
 			validatorSyncData = append(validatorSyncData, vsd)
 			log.WithFields(logrus.Fields{
