@@ -315,7 +315,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
-	// Stop recursive ancestry lookup if context is cancelled.
+	// Stop recursive ancestry lookup if context is canceled.
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/sirupsen/logrus"
@@ -13,10 +12,8 @@ import (
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/core/helpers"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/crypto/hash"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/encoding/bytesutil"
 	ethpb "gitlab.waterfall.network/waterfall/protocol/coordinator/proto/prysm/v1alpha1"
-	"gitlab.waterfall.network/waterfall/protocol/coordinator/time/slots"
 	gwatCommon "gitlab.waterfall.network/waterfall/protocol/gwat/common"
 )
 
@@ -44,7 +41,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 			DepositRoot:  prevEth1Data.GetDepositRoot(),
 		}, nil
 	}
-	eth1DataNotification = false
 
 	prevEth1BlockHash := gwatCommon.BytesToHash(prevEth1Data.GetBlockHash())
 	prevExists, prevEth1BlockNr, err := vs.Eth1BlockFetcher.BlockExists(ctx, prevEth1BlockHash)
@@ -134,11 +130,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	}, nil
 }
 
-func (vs *Server) slotStartTime(slot types.Slot) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	return slots.VotingPeriodStartTime(startTime, slot)
-}
-
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
 func (vs *Server) canonicalEth1Data(
 	ctx context.Context,
@@ -167,31 +158,4 @@ func (vs *Server) canonicalEth1Data(
 		return nil, nil, errors.Wrapf(err, "could not fetch eth1data by hash=%#x hasSupport=%v", eth1BlockHash, hasSupport)
 	}
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
-}
-
-func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
-	if !eth1DataNotification {
-		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
-		eth1DataNotification = true
-	}
-	slotInVotingPeriod := slot.ModSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
-	headState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var enc []byte
-	enc = fastssz.MarshalUint64(enc, uint64(slots.ToEpoch(slot))+uint64(slotInVotingPeriod))
-	depRoot := hash.Hash(enc)
-	blockHash := hash.Hash(depRoot[:])
-
-	finHash := &gwatCommon.Hash{}
-	finHash.SetBytes(depRoot[:])
-	candidates := gwatCommon.HashArray{*finHash}
-
-	return &ethpb.Eth1Data{
-		DepositRoot:  depRoot[:],
-		DepositCount: headState.Eth1DepositIndex(),
-		BlockHash:    blockHash[:],
-		Candidates:   candidates.ToBytes(),
-	}, nil
 }

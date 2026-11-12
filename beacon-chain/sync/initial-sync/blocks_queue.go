@@ -167,7 +167,7 @@ func (q *blocksQueue) stop() error {
 }
 
 // loop is a main queue loop.
-func (q *blocksQueue) loop() {
+func (q *blocksQueue) loop() { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	defer close(q.quit)
 
 	defer func() {

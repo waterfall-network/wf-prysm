@@ -168,7 +168,7 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot types.Slot) (*forkDat
 		return nil, err
 	}
 
-	// Select peers that have higher head slot, and potentially blocks from more favourable fork.
+	// Select peers that have higher head slot, and potentially blocks from more favorable fork.
 	// Exit early if no peers are ready.
 	_, peers := f.p2p.Peers().BestNonFinalized(1, epoch+1)
 	if len(peers) == 0 {

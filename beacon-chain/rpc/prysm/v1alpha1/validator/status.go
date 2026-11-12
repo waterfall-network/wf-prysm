@@ -365,16 +365,6 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	// replay to first slot of following epoch
-	ctx = context.WithValue(ctx, params.BeaconConfig().CtxBlockFetcherKey, db.BlockInfoFetcherFunc(vs.BeaconDB))
-	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
-}
-
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
 	validatorsAreRecent := true
 	resp := &ethpb.DoppelGangerResponse{

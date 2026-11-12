@@ -18,10 +18,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/sirupsen/logrus"
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/config/params"
-	"sync"
 
 	"gitlab.waterfall.network/waterfall/protocol/coordinator/beacon-chain/state"
 )

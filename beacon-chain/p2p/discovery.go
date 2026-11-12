@@ -66,7 +66,7 @@ func (s *Service) RefreshENR() {
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	case currEpoch < altairForkEpoch:
-		// Phase 0 behaviour.
+		// Phase 0 behavior.
 		if bytes.Equal(bitV, currentBitV) {
 			// return early if bitfield hasn't changed
 			return
@@ -560,19 +560,6 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	}
 
 	return addresses, nil
-}
-
-func peerIdsFromMultiAddrs(addrs []ma.Multiaddr) []peer.ID {
-	var peers []peer.ID
-	for _, a := range addrs {
-		info, err := peer.AddrInfoFromP2pAddr(a)
-		if err != nil {
-			log.WithError(err).Errorf("Could not derive peer info from multiaddress %s", a.String())
-			continue
-		}
-		peers = append(peers, info.ID)
-	}
-	return peers
 }
 
 func multiAddrFromString(address string) (ma.Multiaddr, error) {

@@ -33,7 +33,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
-		return false, nil, 0, nil
+		return false, nil, 0, nil //nolint:nilerr // no randao mix means no payload attributes, not a failure
 	}
 
 	// Get fee recipient.

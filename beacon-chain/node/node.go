@@ -110,7 +110,6 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
-	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 	GenesisSszPath          string
@@ -226,7 +225,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering Intial Sync Service")
+	log.Debugln("Registering Initial Sync Service")
 	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}

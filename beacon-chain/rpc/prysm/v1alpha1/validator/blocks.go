@@ -13,7 +13,7 @@ import (
 )
 
 // StreamBlocksAltair to clients every single time a block is received by the beacon node.
-func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
+func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
 	if req.VerifiedOnly {

@@ -18,7 +18,7 @@ import (
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) (*validatorpb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
-		return &validatorpb.NodeConnectionResponse{
+		return &validatorpb.NodeConnectionResponse{ //nolint:nilerr // an unreachable beacon node is reported as Connected: false
 			GenesisTime:        0,
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,

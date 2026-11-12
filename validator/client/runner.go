@@ -32,7 +32,7 @@ var backOffPeriod = 10 * time.Second
 // 4 - Update assignments
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
-func run(ctx context.Context, v iface.Validator) {
+func run(ctx context.Context, v iface.Validator) { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	cleanup := v.Done
 	defer cleanup()
 

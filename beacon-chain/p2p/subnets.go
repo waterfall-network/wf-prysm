@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -107,7 +106,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, index u
 					"threshold":  threshold,
 					"startPerrs": currNum,
 					"startSlot":  startSlot,
-					"nodeInf":    fmt.Sprintf("%s", info.String()),
+					"nodeInf":    info.String(),
 					"topic":      topic,
 				}).WithError(err).Error("Validator subscription: FindPeersWithSubnet: error 2")
 				log.WithError(err).Tracef("Could not connect with peer %s", info.String())

@@ -141,7 +141,7 @@ func (b *BeaconState) recomputeRoot(idx int) {
 		neighborIdx := currentIndex ^ 1
 
 		neighbor := make([]byte, 32)
-		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
+		if len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {

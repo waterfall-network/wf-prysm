@@ -218,7 +218,7 @@ var (
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	if !slots.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil

@@ -106,7 +106,7 @@ func (p *Pool) PendingWithdrawals(slot types.Slot, st state.ReadOnlyBeaconState,
 					"Amount":       fmt.Sprintf("%d", itm.Amount),
 					"availBalance": fmt.Sprintf("%d", availBalMap[itm.ValidatorIndex]),
 					"InitTxHash":   fmt.Sprintf("%#x", itm.InitTxHash),
-				}).Error("WithdrawalPool pool: get pending: skip already handled item item")
+				}).Error("WithdrawalPool pool: get pending: skip already handled item")
 				continue
 			}
 		}

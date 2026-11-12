@@ -231,7 +231,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 		for {
 			msg, err := sub.Next(s.ctx)
 			if err != nil {
-				// This should only happen when the context is cancelled or subscription is cancelled.
+				// This should only happen when the context is canceled or subscription is canceled.
 				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Validator subscription: Subscription next failed")
 				}
@@ -605,7 +605,7 @@ func (s *Service) subscribeAggregatorSubnet(
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 
 	log.WithFields(logrus.Fields{
-		"topic":     fmt.Sprintf("%s", subnetTopic),
+		"topic":     subnetTopic,
 		"digest":    fmt.Sprintf("%#x", digest),
 		"s.curSlot": s.cfg.chain.CurrentSlot(),
 		"curSlot":   slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())),
@@ -781,7 +781,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	if !s.validPeersExist(subnetTopic) {
 		log.WithFields(logrus.Fields{
 			"idx":         idx,
-			"topic":       fmt.Sprintf("%s", topic),
+			"topic":       topic,
 			"subnetTopic": subnetTopic,
 			"digest":      fmt.Sprintf("%#x", digest),
 			"curSlot":     s.cfg.chain.CurrentSlot(),
@@ -791,7 +791,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
 				"idx":         idx,
-				"topic":       fmt.Sprintf("%s", topic),
+				"topic":       topic,
 				"subnetTopic": subnetTopic,
 				"digest":      fmt.Sprintf("%#x", digest),
 				"curSlot":     s.cfg.chain.CurrentSlot(),
@@ -800,7 +800,7 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	} else {
 		log.WithFields(logrus.Fields{
 			"idx":         idx,
-			"topic":       fmt.Sprintf("%s", topic),
+			"topic":       topic,
 			"subnetTopic": subnetTopic,
 			"digest":      fmt.Sprintf("%#x", digest),
 			"curSlot":     s.cfg.chain.CurrentSlot(),
@@ -832,7 +832,7 @@ func (s *Service) lookupPrevotingSubnets(digest [4]byte, idx uint64) {
 	} else {
 		log.WithFields(logrus.Fields{
 			"idx":         idx,
-			"topic":       fmt.Sprintf("%s", topic),
+			"topic":       topic,
 			"subnetTopic": subnetTopic,
 			"digest":      fmt.Sprintf("%#x", digest),
 			"curSlot":     s.cfg.chain.CurrentSlot(),

@@ -18,7 +18,7 @@ const batchSize = 10
 
 var migrationStateValidatorsKey = []byte("migration_state_validator")
 
-func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
+func migrateStateValidators(ctx context.Context, db *bolt.DB) error { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	migrateDB := false
 	if updateErr := db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)

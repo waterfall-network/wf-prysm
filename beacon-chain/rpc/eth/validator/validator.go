@@ -737,20 +737,6 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 	return s, nil
 }
 
-// Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
-func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.ValidatorStatus {
-	switch valStatus {
-	case ethpbv1.ValidatorStatus_ACTIVE:
-		return ethpbalpha.ValidatorStatus_ACTIVE
-	case ethpbv1.ValidatorStatus_PENDING:
-		return ethpbalpha.ValidatorStatus_PENDING
-	case ethpbv1.ValidatorStatus_WITHDRAWAL:
-		return ethpbalpha.ValidatorStatus_EXITED
-	default:
-		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
-	}
-}
-
 func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.BeaconBlock, error) {
 	v1alpha1req := &ethpbalpha.BlockRequest{
 		Slot:         req.Slot,

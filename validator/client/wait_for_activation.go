@@ -48,7 +48,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 // the accountsChangedChan. When an event signal is received, restart the waitForActivation routine.
 // 4) If the stream is reset in error, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
-func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 

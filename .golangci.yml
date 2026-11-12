@@ -13,6 +13,13 @@ linters:
     - unused
     - whitespace
   settings:
+    dupword:
+      # Repeated names in the consensus spec pseudo-code quoted in comments.
+      ignore:
+        - state.next_sync_committee
+        - state.current_epoch_participation
+        - state.current_epoch_attestations
+        - total,
     gocognit:
       min-complexity: 65
     misspell:
@@ -28,6 +35,12 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
+    rules:
+      # A receive from a subscription error channel only signals that the
+      # subscription is closed; the error value is not needed.
+      - linters:
+          - errcheck
+        source: <-\s*[\w.]*(Err\(\)|err)\s*($|:)
     paths:
       - (^|/)third_party/
       - (^|/)builtin/

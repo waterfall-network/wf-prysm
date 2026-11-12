@@ -61,5 +61,5 @@ func (ds *Server) GetBeaconState(
 			Encoded: encoded,
 		}, nil
 	}
-	return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s", "Need to specify either a block root or slot to request state"))
+	return nil, status.Error(codes.InvalidArgument, "Need to specify either a block root or slot to request state")
 }
