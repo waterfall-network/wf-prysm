@@ -227,7 +227,7 @@ func (_ *Server) ValidateKeystores(
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}
 	// Needs to unmarshal the keystores from the requests.
-	if req.Keystores == nil || len(req.Keystores) < 1 {
+	if len(req.Keystores) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores included in request")
 	}
 	decryptor := keystorev4.New()
@@ -278,7 +278,7 @@ func (s *Server) ImportAccounts(
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}
 	// Needs to unmarshal the keystores from the requests.
-	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
+	if len(req.KeystoresImported) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
 	}
 	keystores := make([]*keymanager.Keystore, len(req.KeystoresImported))

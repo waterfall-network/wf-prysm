@@ -170,18 +170,6 @@ func (s *Service) validateUnaggregatedPrevoteWithState(ctx context.Context, p *e
 	return s.validateWithBatchVerifier(ctx, "prevote", set)
 }
 
-func verifyPrevoteSignature(ctx context.Context, beaconState state.ReadOnlyBeaconState, pv *eth.PreVote) error {
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, pv.Data.Slot, pv.Data.Index)
-	if err != nil {
-		return err
-	}
-	indexedPrevote, err := prevote.ConvertToIndexed(ctx, pv, committee)
-	if err != nil {
-		return err
-	}
-	return VerifyIndexedPrevote(ctx, beaconState, indexedPrevote)
-}
-
 func VerifyIndexedPrevote(ctx context.Context, beaconState state.ReadOnlyBeaconState, ipv *eth.IndexedPreVote) error {
 	ctx, span := trace.StartSpan(ctx, "VerifyIndexedPrevote")
 	defer span.End()

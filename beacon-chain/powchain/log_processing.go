@@ -668,29 +668,6 @@ func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum uint
 	return nil
 }
 
-func (s *Service) checkHeaderForChainstart(ctx context.Context, header *gwatTypes.Header) {
-	s.checkForChainstart(ctx, header.Hash(), header.Nr(), header.Time)
-}
-
-func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*gwatTypes.Header,
-	requestHeaders func(uint64, uint64) error) error {
-	for i := start; i <= end; i++ {
-		if !s.chainStartData.Chainstarted {
-			h, ok := headersMap[i]
-			if !ok {
-				if err := requestHeaders(i, end); err != nil {
-					return err
-				}
-				// Retry this block.
-				i--
-				continue
-			}
-			s.checkHeaderForChainstart(ctx, h)
-		}
-	}
-	return nil
-}
-
 // retrieves the current active validator count and genesis time from
 // the provided block time.
 func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (uint64, uint64) {

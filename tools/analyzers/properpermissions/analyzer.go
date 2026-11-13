@@ -75,7 +75,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					if isPkgDot(stmt.Fun, alias, fn) {
 						pass.Reportf(
 							node.Pos(),
-							fmt.Sprintf(
+							"%s", fmt.Sprintf(
 								"%v: %s.%s() (from %s)",
 								errUnsafePackage,
 								alias,

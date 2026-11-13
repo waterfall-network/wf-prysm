@@ -66,7 +66,7 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 	}
 	cbr, cb, err := bs.CanonicalHistory.BlockForSlot(ctx, wsSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
+		return nil, status.Error(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
 	}
 	stateRoot := bytesutil.ToBytes32(cb.Block().StateRoot())
 	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)

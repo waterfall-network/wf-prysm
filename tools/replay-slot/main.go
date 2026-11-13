@@ -14,7 +14,7 @@
 
 // Command replay-slot replays a single block from an existing beacon-chain
 // database and reports whether the resulting post-state root matches the one
-// committed in the block. It is an offline debugging aid for localising
+// committed in the block. It is an offline debugging aid for localizing
 // state-transition divergences: no network, no execution engine, no sync.
 //
 // Build from the wf-prysm module root:

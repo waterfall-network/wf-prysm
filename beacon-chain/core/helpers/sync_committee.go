@@ -33,7 +33,7 @@ func IsCurrentPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, nil //nolint:nilerr // an unknown validator is not in the sync committee
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -70,7 +70,7 @@ func IsNextPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, nil //nolint:nilerr // an unknown validator is not in the sync committee
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {
@@ -97,7 +97,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, nil //nolint:nilerr // an unknown validator has no sync committee positions
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -131,7 +131,7 @@ func NextPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, nil //nolint:nilerr // an unknown validator has no sync committee positions
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {

@@ -26,7 +26,7 @@ type DefaultErrorJSON struct {
 
 // InternalServerErrorWithMessage returns a DefaultErrorJSON with 500 code and a custom message.
 func InternalServerErrorWithMessage(err error, message string) *DefaultErrorJSON {
-	e := errors.Wrapf(err, message)
+	e := errors.Wrap(err, message)
 	return &DefaultErrorJSON{
 		Message: e.Error(),
 		Code:    http.StatusInternalServerError,

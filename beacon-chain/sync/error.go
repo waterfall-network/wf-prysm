@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"errors"
+
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/sirupsen/logrus"

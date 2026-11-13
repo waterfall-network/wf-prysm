@@ -236,7 +236,7 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 			if lockTracker.rLockSelector.isRelated(selMap, 0) {
 				pass.Reportf(
 					node.Pos(),
-					fmt.Sprintf(
+					"%s", fmt.Sprintf(
 						"%v",
 						errNestedMixedLock,
 					),
@@ -245,7 +245,7 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 			if lockTracker.rLockSelector.isEqual(selMap, 0) {
 				pass.Reportf(
 					node.Pos(),
-					fmt.Sprintf(
+					"%s", fmt.Sprintf(
 						"%v",
 						lockmode.ErrorFound(),
 					),
@@ -255,7 +255,7 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 					lockmode.UnLockName()); stack != "" {
 					pass.Reportf(
 						node.Pos(),
-						fmt.Sprintf(
+						"%s", fmt.Sprintf(
 							"%v\n%v",
 							lockmode.ErrorFound(),
 							stack,

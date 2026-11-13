@@ -58,7 +58,7 @@ func (s *Server) registerBeaconClient() error {
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return &validatorpb.BeaconStatusResponse{
+		return &validatorpb.BeaconStatusResponse{ //nolint:nilerr // an unreachable beacon node is reported as Connected: false
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,
 			Syncing:            false,

@@ -81,7 +81,7 @@ func (s *Server) BackupAccounts(
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
 	}
-	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
+	if len(req.PublicKeys) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to backup")
 	}
 	if req.BackupPassword == "" {
@@ -163,7 +163,7 @@ func (s *Server) DeleteAccounts(
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
 	}
-	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
+	if len(req.PublicKeysToDelete) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
 	if s.wallet == nil {

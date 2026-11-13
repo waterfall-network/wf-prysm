@@ -220,7 +220,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		defer span.End()
 
 		// Ignore the message if it is not possible to retrieve the signing root.
-		// For internal errors, the correct behaviour is to ignore rather than reject outright,
+		// For internal errors, the correct behavior is to ignore rather than reject outright,
 		// since the failure is locally derived.
 		d, err := s.cfg.chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {

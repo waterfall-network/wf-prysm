@@ -26,9 +26,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// eth1DataNotification is a latch to stop flooding logs with the same warning.
-var eth1DataNotification bool
-
 const eth1dataTimeout = 2 * time.Second
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -113,7 +110,7 @@ func (vs *Server) PrepareBeaconProposer(
 	for _, recipientContainer := range request.Recipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
 		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)

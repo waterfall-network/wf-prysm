@@ -266,7 +266,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 		return nil
 	}
 
-	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+	return status.Error(codes.Unavailable, errOptimisticMode.Error())
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
@@ -363,16 +363,6 @@ func (vs *Server) validatorStatus(
 	default:
 		return resp, idx
 	}
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	// replay to first slot of following epoch
-	ctx = context.WithValue(ctx, params.BeaconConfig().CtxBlockFetcherKey, db.BlockInfoFetcherFunc(vs.BeaconDB))
-	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

@@ -33,8 +33,6 @@ type PerformExitCfg struct {
 	FormattedPubKeys []string
 }
 
-const exitPassphrase = "Exit my validator"
-
 // PerformVoluntaryExit uses gRPC clients to submit a voluntary exit message to a beacon node.
 func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,

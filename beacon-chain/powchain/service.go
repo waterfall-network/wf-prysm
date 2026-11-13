@@ -244,7 +244,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a web3 service's main event loop.
 func (s *Service) StateTracker() {
-	chainEvtCh := make(chan *feed.Event, 0)
+	chainEvtCh := make(chan *feed.Event)
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(chainEvtCh)
 	defer sub.Unsubscribe()
 
@@ -408,7 +408,7 @@ func (s *Service) headSyncTxLogsByBlockEvt(data *statefeed.BlockProcessedData, i
 	if data.InitialSync {
 		return nil
 	}
-	// if the first event recieved - reinit required props
+	// if the first event received - reinit required props
 	if s.lastHandledState != nil {
 		return nil
 	}
@@ -590,7 +590,7 @@ func (s *Service) headSyncTxLogsByBlockEvt(data *statefeed.BlockProcessedData, i
 }
 
 func (s *Service) handlerFinalizedCheckpointEvt(data *ethpbv1.EventFinalizedCheckpoint) error {
-	// if the first event recieved - reinit required props
+	// if the first event received - reinit required props
 	if s.lastHandledState == nil {
 		return nil
 	}

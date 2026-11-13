@@ -95,7 +95,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	const lastValidStatusValue = ethpb.ValidatorStatus(12)
 	for _, ss := range req.Status {
 		if ss > lastValidStatusValue {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid status "+ss.String())
+			return nil, status.Error(codes.InvalidArgument, "Invalid status "+ss.String())
 		}
 		filterStatus[ss] = true
 	}

@@ -28,7 +28,7 @@ func (s *Service) verifierRoutine() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			// Clean up currently utilised resources.
+			// Clean up currently utilized resources.
 			ticker.Stop()
 			for i := 0; i < len(verifierBatch); i++ {
 				verifierBatch[i].resChan <- s.ctx.Err()

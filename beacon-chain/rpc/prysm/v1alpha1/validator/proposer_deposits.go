@@ -54,7 +54,7 @@ func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 		}
-		// if the original context is cancelled, then cancel this routine too
+		// if the original context is canceled, then cancel this routine too
 		select {
 		case <-egctx.Done():
 			return egctx.Err()
@@ -70,7 +70,7 @@ func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 		}
-		// if the original context is cancelled, then cancel this routine too
+		// if the original context is canceled, then cancel this routine too
 		select {
 		case <-egctx.Done():
 			return egctx.Err()

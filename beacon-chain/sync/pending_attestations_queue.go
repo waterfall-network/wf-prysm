@@ -40,7 +40,7 @@ func (s *Service) processPendingAttsQueue() {
 // 1. Clean up invalid pending attestations from the queue.
 // 2. Check if pending attestations can be processed when the block has arrived.
 // 3. Request block from a random peer if unable to proceed step 2.
-func (s *Service) processPendingAtts(ctx context.Context) error {
+func (s *Service) processPendingAtts(ctx context.Context) error { //nolint:gocognit // pre-existing complexity, refactoring is out of scope
 	ctx, span := trace.StartSpan(ctx, "processPendingAtts")
 	defer span.End()
 

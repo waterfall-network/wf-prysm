@@ -143,6 +143,11 @@ func (v *ValidatorService) Start() {
 	v.ctx = grpcutil.AppendHeaders(v.ctx, v.grpcHeaders)
 
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
+	if err == nil && v.ctx.Err() != nil {
+		// Newer grpc no longer fails a non-blocking dial on a canceled context; keep the old behavior.
+		_ = conn.Close()
+		err = v.ctx.Err()
+	}
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
